@@ -1,0 +1,66 @@
+{
+  "expo": {
+    "name": "ActaYa",
+    "slug": "actaya",
+    "scheme": "actaya",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FFFFFF",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ec.org.actaya.app"
+    },
+    "android": {
+      "package": "ec.org.actaya.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#024873",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-status-bar",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "ActaYa necesita tu ubicación para respaldar desde dónde se registra cada acta."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "ActaYa necesita acceso a tus fotos para adjuntar la evidencia del acta.",
+          "cameraPermission": "ActaYa necesita la cámara para fotografiar el acta de escrutinio."
+        }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "TU_ORGANIZACION_SENTRY",
+          "project": "actaya"
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#024873"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "REEMPLAZAR_CON_TU_EAS_PROJECT_ID"
+      }
+    }
+  }
+}

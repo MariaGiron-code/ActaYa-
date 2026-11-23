@@ -1,0 +1,25 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Versión transparente, centrada en la zona segura (~66%) para adaptive icon / splash -->
+  <g transform="translate(300,232) scale(0.78)">
+    <path d="M0 28
+             C0 12.536 12.536 0 28 0
+             H420
+             L560 140
+             V704
+             C560 719.464 547.464 732 532 732
+             H28
+             C12.536 732 0 719.464 0 704
+             Z"
+          fill="#FFFFFF"/>
+    <path d="M420 0 L560 140 H448 C432.536 140 420 127.464 420 112 Z" fill="#F2DF7E"/>
+
+    <rect x="72" y="260" width="416" height="30" rx="15" fill="#E3E3E3"/>
+    <rect x="72" y="326" width="416" height="30" rx="15" fill="#E3E3E3"/>
+    <rect x="72" y="392" width="260" height="30" rx="15" fill="#E3E3E3"/>
+  </g>
+
+  <circle cx="690" cy="690" r="132" fill="#F2CB05" stroke="#D90B1C" stroke-width="16"/>
+  <path d="M634 692 L674 732 L748 648"
+        fill="none" stroke="#024873" stroke-width="30"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

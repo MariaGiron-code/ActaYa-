@@ -1,0 +1,21 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Android 13+ themed icon: una sola forma, el sistema la recolorea -->
+  <g transform="translate(300,232) scale(0.78)" fill="#FFFFFF">
+    <path d="M0 28
+             C0 12.536 12.536 0 28 0
+             H420
+             L560 140
+             V704
+             C560 719.464 547.464 732 532 732
+             H28
+             C12.536 732 0 719.464 0 704
+             Z"/>
+    <rect x="72" y="260" width="416" height="30" rx="15"/>
+    <rect x="72" y="326" width="416" height="30" rx="15"/>
+    <rect x="72" y="392" width="260" height="30" rx="15"/>
+  </g>
+  <circle cx="690" cy="690" r="132" fill="#FFFFFF"/>
+  <path d="M634 692 L674 732 L748 648"
+        fill="none" stroke="#000000" stroke-width="30"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
