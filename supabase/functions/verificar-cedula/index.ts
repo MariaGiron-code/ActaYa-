@@ -68,11 +68,14 @@ serve(async (req: Request) => {
     // Se lee ÚNICAMENTE el nombre para comparar — el resto del payload
     // (dirección, teléfono, fecha de nacimiento, etc.) se ignora a propósito
     // y no se asigna a ninguna variable, para no poder registrarlo por error.
-    // TODO: confirma el nombre exacto del campo (`data.name` vs. campos
-    // separados `data.firstName`/`data.lastName`) contra tu propia cuenta de
-    // Datacil antes de usarlo en la defensa — esto se basa en investigación
-    // de su documentación pública, no en una respuesta real verificada.
-    const nombreCompleto = `${resultado?.data?.name ?? ''}`.trim().toUpperCase();
+    // Campo confirmado contra una respuesta real: `data.name` viene en
+    // formato "APELLIDOS NOMBRES". Debe normalizarse (quitar tildes/eñes)
+    // igual que `apellidos`/`nombres` — si no, un nombre con tilde (ej.
+    // "CEDEÑO") nunca coincide con la versión sin tilde ("CEDENO") y se
+    // rechazan cédulas que la API sí reconoce correctamente (bug real,
+    // encontrado probando con una cédula sin RUC — no tenía relación con el
+    // RUC, era puramente este problema de comparación de texto).
+    const nombreCompleto = normalizar(resultado?.data?.name);
     const existe = resultado?.success === true && nombreCompleto.length > 0;
     const coincideNombre =
       existe && nombreCompleto.includes(normalizar(apellidos)) && nombreCompleto.includes(normalizar(nombres));
