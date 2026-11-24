@@ -176,13 +176,35 @@ function FormularioVeedorNuevo({
     resolver: zodResolver(esquemaNuevo),
     defaultValues: { cedula: '', nombres: '', apellidos: '', telefono: '', correo: '' },
   });
+  const [claveTemporal, setClaveTemporal] = useState<string | null>(null);
 
   const onSubmit = handleSubmit((datos) =>
     reemplazarVeedor.mutate(
       { asignacionActualId, reemplazo: { tipo: 'nuevo', datos } },
-      { onSuccess: (r) => r.ok && onExito() }
+      {
+        onSuccess: (r) => {
+          if (!r.ok) return;
+          // S-11: si por algo no viniera la clave, no hay nada que mostrar —
+          // se cierra el formulario igual que antes en vez de dejarlo colgado.
+          if (r.value.claveTemporal) setClaveTemporal(r.value.claveTemporal);
+          else onExito();
+        },
+      }
     )
   );
+
+  if (claveTemporal) {
+    return (
+      <View style={styles.acciones}>
+        <Text style={styles.cardDetalle}>
+          Entrega esta clave temporal a la persona para que pueda ingresar y reemplazar al veedor anterior. Solo se
+          mostrará esta vez (S-11):
+        </Text>
+        <Text style={styles.claveTemporal}>{claveTemporal}</Text>
+        <Button label="Listo" onPress={onExito} />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.acciones}>
@@ -268,4 +290,5 @@ const styles = StyleSheet.create({
   opcion: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.sm },
   opcionTexto: { ...typography.body, color: colors.textPrimary },
   error: { ...typography.caption, color: colors.error, marginTop: spacing.xs },
+  claveTemporal: { ...typography.h2, color: colors.primary, textAlign: 'center', marginVertical: spacing.sm },
 });

@@ -1,4 +1,4 @@
-import { fail, Result } from '@core/utils/result';
+import { fail, ok, Result } from '@core/utils/result';
 import { RolUsuario } from '@features/auth/domain/entities/Usuario';
 import { CrearUsuarioInput } from '@features/auth/domain/repositories/AuthRepository';
 import { CrearUsuarioUseCase } from '@features/auth/domain/use-cases/CrearUsuarioUseCase';
@@ -8,6 +8,17 @@ import { AsignacionVeedor } from '../entities/AsignacionVeedor';
 export type ReemplazoInput =
   | { tipo: 'existente'; veedorId: string }
   | { tipo: 'nuevo'; datos: Omit<CrearUsuarioInput, 'rol' | 'recintoId' | 'mesasAsignadas'> };
+
+/**
+ * `claveTemporal` solo viene presente en la rama "nuevo": el veedor
+ * reemplazante necesita saberla para poder entrar (S-11), igual que
+ * cualquier cuenta creada desde `CrearUsuarioScreen` — antes se perdía aquí
+ * mismo porque esta función solo devolvía la asignación.
+ */
+export type ReemplazoVeedorResultado = {
+  asignacion: AsignacionVeedor;
+  claveTemporal: string | null;
+};
 
 /**
  * RF-08 / S-03: el coordinador de recinto reemplaza a un veedor ausente el
@@ -26,13 +37,15 @@ export class ReemplazarVeedorUseCase {
     asignacionActualId: string,
     reemplazo: ReemplazoInput,
     rolDeQuienLlama: RolUsuario
-  ): Promise<Result<AsignacionVeedor>> {
+  ): Promise<Result<ReemplazoVeedorResultado>> {
     if (rolDeQuienLlama !== RolUsuario.COORDINADOR_RECINTO) {
       return fail({ code: 'ROL_NO_AUTORIZADO', message: 'Solo el coordinador de recinto puede reemplazar veedores.' });
     }
 
     if (reemplazo.tipo === 'existente') {
-      return this.repository.reemplazarVeedor(asignacionActualId, reemplazo.veedorId);
+      const asignacion = await this.repository.reemplazarVeedor(asignacionActualId, reemplazo.veedorId);
+      if (!asignacion.ok) return asignacion;
+      return ok({ asignacion: asignacion.value, claveTemporal: null });
     }
 
     const nuevoUsuario = await this.crearUsuarioUseCase.ejecutar(
@@ -41,6 +54,9 @@ export class ReemplazarVeedorUseCase {
     );
     if (!nuevoUsuario.ok) return fail(nuevoUsuario.error);
 
-    return this.repository.reemplazarVeedor(asignacionActualId, nuevoUsuario.value.usuario.id);
+    const asignacion = await this.repository.reemplazarVeedor(asignacionActualId, nuevoUsuario.value.usuario.id);
+    if (!asignacion.ok) return asignacion;
+
+    return ok({ asignacion: asignacion.value, claveTemporal: nuevoUsuario.value.claveTemporal });
   }
 }
