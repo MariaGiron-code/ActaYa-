@@ -140,6 +140,7 @@ function FormularioActa({
   const [totalSufragantes, setTotalSufragantes] = useState('');
   const [fotoUri, setFotoUri] = useState<string | null>(null);
   const [ubicacion, setUbicacion] = useState<Ubicacion | null>(null);
+  const [nitidez, setNitidez] = useState<number | null>(null);
 
   const organizacionesDignidad = useMemo(() => {
     if (!dignidad || !organizaciones.data?.ok) return [];
@@ -163,6 +164,7 @@ function FormularioActa({
     setTotalSufragantes('');
     setFotoUri(null);
     setUbicacion(null);
+    setNitidez(null);
     setDignidad(nueva);
   }
 
@@ -171,6 +173,7 @@ function FormularioActa({
     if (resultado.ok) {
       setFotoUri(resultado.value.fotoUri);
       setUbicacion(resultado.value.ubicacion);
+      setNitidez(resultado.value.nitidez);
     }
   }
 
@@ -239,7 +242,13 @@ function FormularioActa({
 
           <View style={styles.acciones}>
             {fotoUri ? (
-              <Image source={{ uri: fotoUri }} style={styles.foto} />
+              <>
+                <Image source={{ uri: fotoUri }} style={styles.foto} />
+                {/* S-12: ayuda a calibrar UMBRAL_NITIDEZ_MINIMO con fotos reales — nunca en el build de entrega. */}
+                {__DEV__ && nitidez !== null ? (
+                  <Text style={styles.nitidezDebug}>nitidez: {nitidez.toFixed(1)}</Text>
+                ) : null}
+              </>
             ) : (
               <Text style={styles.vacio}>Todavía no has tomado la foto del acta.</Text>
             )}
@@ -273,6 +282,7 @@ const styles = StyleSheet.create({
   cardDetalle: { ...typography.body, color: colors.textPrimary },
   acciones: { gap: spacing.sm, marginTop: spacing.sm },
   foto: { width: '100%', height: 220, borderRadius: radius.sm, marginBottom: spacing.xs },
+  nitidezDebug: { ...typography.caption, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xs },
   error: { ...typography.caption, color: colors.error, textAlign: 'center' },
   pendientes: { marginTop: spacing.lg, gap: spacing.xs },
   filaPendiente: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
