@@ -23,13 +23,9 @@ qué falta y cómo seguir el mismo patrón.
 | Estado de servidor / offline | TanStack Query + persist-client | ADR-08 |
 | Formularios | React Hook Form + Zod | ADR-09 |
 | Panel en tiempo real | Supabase Realtime | ADR-10 |
-| Verificación de cédula/correo | Edge Functions → Datacil + QuickEmailVerification | ADR-11 (ver nota abajo) |
+| Verificación de cédula/correo | Edge Functions → Datacil + QuickEmailVerification | ADR-11  |
 | Arquitectura | Clean Architecture + Vertical Slicing, Zustand para estado de UI/sesión | ADR-12 |
 
-**Nota sobre ADR-11:** el ADR original evaluó `whoecuador.com` para cédulas. Esa
-opción se descartó al construir el proyecto base: el dominio no tiene ningún rastro
-verificable en internet y expone datos personales completos sin flujo de
-consentimiento, lo que no es defendible ni legal bajo la LOPDP ecuatoriana.
 
 Se usa **Datacil** (`https://datacil.com`, operado por OMENIUS S.A.S., RUC
 0195170932001, Cuenca) en su lugar — es un detalle de implementación del mismo
@@ -47,7 +43,7 @@ Precio: $0.20/consulta exitosa (Ecuador), con $10 de crédito gratis al mes
 (~50 consultas) y modo sandbox gratuito ilimitado para desarrollo.
 
 Para correo se usa **QuickEmailVerification** (API en tiempo real, 100
-verificaciones gratis al día, sin tarjeta — de sobra para el examen).
+verificaciones gratis al día, sin tarjeta ideal para la app actual).
 
 ## Arquitectura
 
