@@ -5,7 +5,7 @@
  * tercer dígito de persona natural, dígito verificador correcto). NO
  * confirma que la cédula exista en el Registro Civil ni que pertenezca a
  * quien la registra: esa comprobación de existencia la hace la Edge
- * Function `verify-cedula` contra Didit (ADR-11).
+ * Function `verificar-cedula` contra Datacil (ADR-11).
  *
  * Mantener esta validación local es clave: evita gastar una consulta a la
  * API externa (y su cuota/costo) cuando el error es simplemente una cédula

@@ -23,16 +23,31 @@ qué falta y cómo seguir el mismo patrón.
 | Estado de servidor / offline | TanStack Query + persist-client | ADR-08 |
 | Formularios | React Hook Form + Zod | ADR-09 |
 | Panel en tiempo real | Supabase Realtime | ADR-10 |
-| Verificación de cédula/correo | Edge Functions → Didit + QuickEmailVerification | ADR-11 (ver nota abajo) |
+| Verificación de cédula/correo | Edge Functions → Datacil + QuickEmailVerification | ADR-11 (ver nota abajo) |
 | Arquitectura | Clean Architecture + Vertical Slicing, Zustand para estado de UI/sesión | ADR-12 |
 
 **Nota sobre ADR-11:** el ADR original evaluó `whoecuador.com` para cédulas. Esa
 opción se descartó al construir el proyecto base: el dominio no tiene ningún rastro
 verificable en internet y expone datos personales completos sin flujo de
-consentimiento, lo que no es defendible ni legal bajo la LOPDP ecuatoriana. Se usa
-**Didit** en su lugar (proveedor KYC real, valida contra el Registro Civil, 500
-verificaciones gratis/mes) — es un detalle de implementación del mismo requisito
-acordado ("verificar existencia mediante API"), no un cambio de línea base.
+consentimiento, lo que no es defendible ni legal bajo la LOPDP ecuatoriana.
+
+Se usa **Datacil** (`https://datacil.com`, operado por OMENIUS S.A.S., RUC
+0195170932001, Cuenca) en su lugar — es un detalle de implementación del mismo
+requisito acordado ("verificar existencia mediante API"), no un cambio de línea
+base. Es más serio que `whoecuador.com` (empresa identificable, ToS y política de
+privacidad publicadas, cita la LOPDP, DPO con contacto), **pero no es un proveedor
+KYC**: su propia documentación dice que automatiza la misma consulta pública que
+haría una persona en el portal del Registro Civil, y sus Términos de Servicio
+(cláusulas 4.3/4.4) trasladan al integrador la responsabilidad de tener una base
+legal propia para la consulta. Para reducir esa exposición, la Edge Function
+`verificar-cedula` (ver su comentario de cabecera) solo pide el endpoint básico de
+cédula, lee únicamente el campo de nombre para el match y descarta sin persistir
+ni registrar el resto del payload (dirección, teléfono, fecha de nacimiento).
+Precio: $0.20/consulta exitosa (Ecuador), con $10 de crédito gratis al mes
+(~50 consultas) y modo sandbox gratuito ilimitado para desarrollo.
+
+Para correo se usa **QuickEmailVerification** (API en tiempo real, 100
+verificaciones gratis al día, sin tarjeta — de sobra para el examen).
 
 ## Arquitectura
 
@@ -83,7 +98,7 @@ no una restricción del examen — se puede migrar a Expo Router si lo prefieres
 3. **Aplicar la migración** (`supabase/migrations/0001_usuarios.sql`) desde el SQL Editor de Supabase o con la CLI (`supabase db push`).
 4. **Configurar los secretos de las Edge Functions** (nunca van en `.env` del cliente):
    ```powershell
-   npx supabase secrets set DIDIT_API_KEY=tu_clave
+   npx supabase secrets set DATACIL_API_KEY=tu_clave
    npx supabase secrets set QUICKEMAILVERIFICATION_API_KEY=tu_clave
    ```
 5. **Desplegar las Edge Functions:**

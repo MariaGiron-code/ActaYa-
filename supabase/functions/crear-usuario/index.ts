@@ -60,7 +60,7 @@ serve(async (req: Request) => {
     }
 
     // Reutiliza las mismas Edge Functions que usa el cliente (ADR-11), para
-    // no duplicar la lógica de llamar a Didit / QuickEmailVerification.
+    // no duplicar la lógica de llamar a Datacil / QuickEmailVerification.
     const [cedulaResp, correoResp] = await Promise.all([
       admin.functions.invoke('verificar-cedula', { body: { cedula, nombres, apellidos } }),
       admin.functions.invoke('verificar-correo', { body: { correo } }),

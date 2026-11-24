@@ -2,7 +2,7 @@
  * Variables de entorno públicas (expuestas al bundle del cliente).
  * Deben definirse en `.env` (ver `.env.example`) con prefijo EXPO_PUBLIC_.
  *
- * IMPORTANTE: las claves de Didit y QuickEmailVerification NUNCA van aquí.
+ * IMPORTANTE: las claves de Datacil y QuickEmailVerification NUNCA van aquí.
  * Esas se configuran como secretos del proyecto de Supabase y solo las usan
  * las Edge Functions en `supabase/functions/*` (ver ADR-11).
  */

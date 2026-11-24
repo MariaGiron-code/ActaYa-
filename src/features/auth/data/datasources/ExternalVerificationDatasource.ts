@@ -3,7 +3,7 @@ import { fail, ok, Result } from '@core/utils/result';
 import { VerificacionCedula, VerificacionCorreo } from '../../domain/repositories/VerificationRepository';
 
 /**
- * ADR-11: nunca se llama a Didit ni a QuickEmailVerification directamente
+ * ADR-11: nunca se llama a Datacil ni a QuickEmailVerification directamente
  * desde el cliente (expondría las llaves privadas). Ambas pasan por Edge
  * Functions de Supabase, que además cachean resultados para no pagar dos
  * veces por la misma consulta.
