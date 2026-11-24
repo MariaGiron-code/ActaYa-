@@ -18,6 +18,10 @@ export class ActasRepositoryImpl implements ActasRepository {
     return this.localDatasource.listarPendientes();
   }
 
+  listarTodasLocales(): Promise<Result<Acta[]>> {
+    return this.localDatasource.listarTodas();
+  }
+
   enviar(acta: Acta): Promise<Result<Acta, ConflictoVersion | AppError>> {
     return this.remoteDatasource.enviar(acta);
   }

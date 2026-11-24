@@ -27,6 +27,11 @@ export class LocalActasDatasource {
     return ok(actas.filter((a) => a.estado !== 'guardado'));
   }
 
+  /** S-06: incluye también las ya sincronizadas — hace falta saber cuántas actas registró el veedor en total, no solo las que faltan por enviar. */
+  async listarTodas(): Promise<Result<Acta[]>> {
+    return ok(await this.leerTodas());
+  }
+
   private async leerTodas(): Promise<Acta[]> {
     return (await localStorage.getItem<Acta[]>(CLAVE_ACTAS_LOCALES)) ?? [];
   }

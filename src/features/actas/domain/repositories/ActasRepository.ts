@@ -7,6 +7,8 @@ export interface ActasRepository {
   /** Guarda en AsyncStorage/FileSystem de inmediato, sin esperar red (RNF-05). */
   guardarLocal(acta: Acta): Promise<Result<void>>;
   listarPendientesDeEnvio(): Promise<Result<Acta[]>>;
+  /** S-06: todas las registradas localmente, enviadas o no — para contar cuántas le faltan al veedor. */
+  listarTodasLocales(): Promise<Result<Acta[]>>;
   /** Sube acta + foto; el servidor rechaza duplicados por `id` y ediciones basadas en una versión vieja (S-05). */
   enviar(acta: Acta): Promise<Result<Acta, ConflictoVersion | AppError>>;
   corregir(

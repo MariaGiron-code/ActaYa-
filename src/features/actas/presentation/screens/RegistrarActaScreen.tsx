@@ -9,6 +9,7 @@ import { useMesa, useOrganizacionesConCandidatos } from '@features/territorio/pr
 import { Dignidad } from '@features/territorio/domain/entities/Territorio';
 import {
   useActasPendientes,
+  useAlertaDemoraRegistro,
   useCapturarFotoActa,
   useRegistrarActa,
   useSincronizarActasAlVolverOnline,
@@ -30,6 +31,7 @@ export function RegistrarActaScreen() {
   const usuario = useSessionStore((s) => s.usuario);
   const misAsignaciones = useMisAsignaciones(usuario?.id ?? null);
   const [asignacionSeleccionada, setAsignacionSeleccionada] = useState<AsignacionVeedor | null>(null);
+  const alertaDemora = useAlertaDemoraRegistro(usuario?.id ?? null);
 
   useSincronizarActasAlVolverOnline();
 
@@ -39,6 +41,7 @@ export function RegistrarActaScreen() {
     return (
       <Screen>
         <Text style={styles.titulo}>Mis mesas</Text>
+        <AlertaDemoraBanner alerta={alertaDemora} />
         {misAsignaciones.isLoading ? (
           <FeedbackState
             source={require('../../../../../assets/lottie/cargando.json')}
@@ -71,6 +74,23 @@ export function RegistrarActaScreen() {
       registradoPorId={usuario.id}
       onVolver={() => setAsignacionSeleccionada(null)}
     />
+  );
+}
+
+/** S-06: oculta el banner si no hace falta (nivel 'ninguna' — ya registró todo o aún no pasó el margen). */
+function AlertaDemoraBanner({ alerta }: { alerta: ReturnType<typeof useAlertaDemoraRegistro> }) {
+  if (alerta.nivel === 'ninguna') return null;
+
+  const plural = alerta.actasFaltantes === 1 ? 'acta' : 'actas';
+  const mensaje =
+    alerta.nivel === 'critica'
+      ? `Han pasado ${alerta.minutosDesdeCierre} minutos desde el cierre y todavía te faltan ${alerta.actasFaltantes} ${plural} por registrar. Si tuviste un problema, avisa al coordinador de tu recinto en cuanto tengas señal.`
+      : `Ya cerró la votación y todavía te faltan ${alerta.actasFaltantes} ${plural} por registrar. Hazlo cuanto antes.`;
+
+  return (
+    <View style={[styles.alerta, alerta.nivel === 'critica' ? styles.alertaCritica : styles.alertaAdvertencia]}>
+      <Text style={styles.alertaTexto}>{mensaje}</Text>
+    </View>
   );
 }
 
@@ -256,4 +276,8 @@ const styles = StyleSheet.create({
   error: { ...typography.caption, color: colors.error, textAlign: 'center' },
   pendientes: { marginTop: spacing.lg, gap: spacing.xs },
   filaPendiente: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  alerta: { borderRadius: radius.sm, padding: spacing.md, marginBottom: spacing.md, borderWidth: 1 },
+  alertaAdvertencia: { backgroundColor: colors.warning + '26', borderColor: colors.warning },
+  alertaCritica: { backgroundColor: colors.error + '26', borderColor: colors.error },
+  alertaTexto: { ...typography.body, color: colors.textPrimary },
 });

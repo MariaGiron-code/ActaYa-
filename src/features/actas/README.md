@@ -30,6 +30,13 @@ corrección).
 - RF-13: `ListaPendientes` en `RegistrarActaScreen` usa `<StatusBadge>` para
   que el estado de cada acta (en proceso/guardado/fallido) esté siempre
   visible, nunca un Alert genérico.
+- S-06: `CalcularAlertaDemoraRegistro.ts` compara la hora actual contra la
+  hora de cierre de votación (17:00, CNE) y cuántas actas le faltan al
+  veedor (mesas asignadas x 2, contra lo guardado LOCALMENTE — funciona sin
+  señal). `RegistrarActaScreen` muestra un banner amarillo (advertencia) o
+  rojo (crítico) según cuánto tiempo pasó — **verifica/calibra los
+  umbrales y la hora de cierre contra el cronograma oficial antes de la
+  defensa**, igual que el umbral de nitidez de abajo.
 
 ## Decisión técnica: nitidez de foto (ADR-06)
 `expo-image-manipulator` en SDK 57 **no da acceso a píxeles crudos**: solo
@@ -42,9 +49,7 @@ teléfono antes de la defensa** (el valor actual es un punto de partida
 razonable, no una medición tuya).
 
 ## Qué falta construir
-1. **Alerta de demora (S-06)**: avisar si el veedor tarda demasiado en
-   registrar tras cerrar la votación — no implementado.
-2. La lista de `CorregirActasScreen` no pide la URL firmada de la foto (para
+1. La lista de `CorregirActasScreen` no pide la URL firmada de la foto (para
    no gastar una llamada a Storage por fila) — si en algún momento se quiere
    mostrar la foto original al corregir, hay que agregarla ahí.
 

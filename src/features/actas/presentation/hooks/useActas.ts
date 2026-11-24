@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNetworkStatus } from '@core/network/useNetworkStatus';
 import { personalContainer } from '@features/personal/di/personalContainer';
@@ -7,9 +7,11 @@ import { actasContainer } from '../../di/actasContainer';
 import { RegistrarActaInput } from '../../domain/use-cases/RegistrarActaUseCase';
 import { CorregirActaInput } from '../../domain/use-cases/CorregirActaUseCase';
 import { Acta } from '../../domain/entities/Acta';
+import { calcularAlertaDemora } from '../../domain/use-cases/CalcularAlertaDemoraRegistro';
 
 const CLAVE_PENDIENTES = ['actas', 'pendientes'];
 const CLAVE_CORREGIBLES = ['actas', 'corregibles'];
+const CLAVE_LOCALES = ['actas', 'locales'];
 
 export function useActasPendientes() {
   return useQuery({
@@ -41,6 +43,7 @@ export function useRegistrarActa() {
     onSuccess: (resultado) => {
       if (!resultado.ok) return;
       queryClient.invalidateQueries({ queryKey: CLAVE_PENDIENTES });
+      queryClient.invalidateQueries({ queryKey: CLAVE_LOCALES });
       // No basta con esperar a que `useSincronizarActasAlVolverOnline`
       // detecte un cambio de conectividad: ese efecto solo reacciona a la
       // TRANSICIÓN offline->online, así que si el veedor ya tenía señal
@@ -113,4 +116,35 @@ export function useSincronizarActasAlVolverOnline() {
       }
     });
   }, [isOnline, queryClient]);
+}
+
+/**
+ * S-06: le avisa al veedor si ya pasó la hora de cierre de votación y
+ * todavía le faltan actas por registrar (mesas asignadas x 2 dignidades,
+ * contra lo que ya tiene guardado LOCALMENTE — RNF-05, no depende de señal).
+ * El `setInterval` de abajo NO es polling de red (RNF-05/RNF-07 lo prohíben
+ * para datos del servidor): solo refresca el reloj local cada minuto para
+ * que el nivel de la alerta avance aunque el veedor deje la pantalla abierta.
+ */
+export function useAlertaDemoraRegistro(veedorId: string | null) {
+  const asignaciones = useQuery({
+    queryKey: ['personal', 'mis-asignaciones', veedorId],
+    queryFn: () => personalContainer.personalRepository.listarAsignacionesDelVeedor(veedorId as string),
+    enabled: veedorId !== null,
+  });
+  const localesRegistradas = useQuery({
+    queryKey: CLAVE_LOCALES,
+    queryFn: () => actasContainer.actasRepository.listarTodasLocales(),
+  });
+  const [ahora, setAhora] = useState(() => new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setAhora(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const actasEsperadas = asignaciones.data?.ok ? asignaciones.data.value.length * 2 : 0;
+  const actasRegistradas = localesRegistradas.data?.ok ? localesRegistradas.data.value.length : 0;
+
+  return calcularAlertaDemora({ actasEsperadas, actasRegistradas, ahora });
 }
