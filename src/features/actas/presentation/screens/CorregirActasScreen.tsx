@@ -1,6 +1,24 @@
 import React, { useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { Button, FeedbackState, Screen, StatusBadge, TextField } from '@core/ui';
+import Animated from 'react-native-reanimated';
+import {
+  AlertBanner,
+  animaciones,
+  Button,
+  Card,
+  ChevronRightIcon,
+  DireccionTransicion,
+  entradaDeBloque,
+  entradaEnLista,
+  FeedbackState,
+  haptics,
+  Screen,
+  StatusBadge,
+  TextField,
+  toast,
+  ActaIcon,
+  EmptyState,
+} from '@core/ui';
 import { colors, radius, spacing, typography } from '@core/theme';
 import { useMesa, useOrganizacionesConCandidatos } from '@features/territorio/presentation/hooks/useTerritorio';
 import { useActasCorregibles, useCorregirActa } from '../hooks/useActas';
@@ -15,36 +33,59 @@ import { ConflictoVersion } from '../../domain/repositories/ActasRepository';
 export function CorregirActasScreen() {
   const actas = useActasCorregibles();
   const [actaSeleccionada, setActaSeleccionada] = useState<Acta | null>(null);
+  const [transicion, setTransicion] = useState<DireccionTransicion>();
 
   if (actaSeleccionada) {
-    return <FormularioCorreccion acta={actaSeleccionada} onVolver={() => setActaSeleccionada(null)} />;
+    return (
+      <FormularioCorreccion
+        acta={actaSeleccionada}
+        onVolver={() => {
+          setTransicion('atras');
+          setActaSeleccionada(null);
+        }}
+      />
+    );
   }
 
   return (
-    <Screen>
-      <Text style={styles.titulo}>Corregir actas</Text>
+    <Screen transicion={transicion}>
+      <Text style={styles.intro}>Toca un acta para corregir sus votos.</Text>
 
       {actas.isLoading ? (
         <FeedbackState
-          source={require('../../../../../assets/lottie/cargando.json')}
+          source={animaciones.cargando}
           message="Cargando actas…"
           loop
         />
       ) : actas.data && !actas.data.ok ? (
-        <Text style={styles.error}>{actas.data.error.message}</Text>
+        <FeedbackState source={animaciones.error} message={actas.data.error.message} />
       ) : (
         <FlatList
           style={styles.flatList}
           data={actas.data?.ok ? actas.data.value : []}
           keyExtractor={(item) => item.id}
-          ListEmptyComponent={<Text style={styles.vacio}>No hay actas para corregir todavía.</Text>}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <MesaLabel mesaId={item.mesaId} />
-              <Text style={styles.cardDetalle}>{item.dignidad === 'ALCALDIA' ? 'Alcaldía' : 'Prefectura'}</Text>
+          ListEmptyComponent={
+            <EmptyState
+              titulo="No hay actas para corregir"
+              mensaje="Cuando se registren actas de tus mesas, aparecerán aquí."
+            />
+          }
+          renderItem={({ item, index }) => (
+            <Card
+              entering={entradaEnLista(index)}
+              icono={<ActaIcon />}
+              onPress={() => setActaSeleccionada(item)}
+              accessibilityLabel="Corregir esta acta"
+            >
+              <View style={styles.filaTarjeta}>
+                <View style={styles.datosTarjeta}>
+                  <MesaLabel mesaId={item.mesaId} />
+                  <Text style={styles.cardDetalle}>{item.dignidad === 'ALCALDIA' ? 'Alcaldía' : 'Prefectura'}</Text>
+                </View>
+                <ChevronRightIcon />
+              </View>
               <StatusBadge estado={item.estado} />
-              <Button label="Corregir" variant="outline" onPress={() => setActaSeleccionada(item)} />
-            </View>
+            </Card>
           )}
           contentContainerStyle={styles.lista}
         />
@@ -107,8 +148,30 @@ function FormularioCorreccion({ acta, onVolver }: { acta: Acta; onVolver: () => 
         },
         actaActual,
       },
-      { onSuccess: (r) => r.ok && onVolver() }
+      {
+        onSuccess: (r) => {
+          if (r.ok) {
+            toast.exito('Corrección guardada');
+            onVolver();
+          } else if (r.error.code !== 'CONFLICTO_VERSION') {
+            // El conflicto ya vibra al mostrarse su AlertBanner.
+            haptics.error();
+          }
+        },
+      }
     );
+  }
+
+  function cargarVersionDelServidor(versionServidor: Acta) {
+    setActaActual(versionServidor);
+    setVotos(
+      Object.fromEntries(Object.entries(versionServidor.votosPorOrganizacion).map(([id, v]) => [id, String(v)]))
+    );
+    setVotosNulos(String(versionServidor.votosNulos));
+    setVotosBlancos(String(versionServidor.votosBlancos));
+    setTotalSufragantes(String(versionServidor.totalSufragantes));
+    corregirActa.reset();
+    toast.info(`Se cargó la versión ${versionServidor.version} del servidor. Revisa y vuelve a guardar.`);
   }
 
   const conflicto =
@@ -121,7 +184,7 @@ function FormularioCorreccion({ acta, onVolver }: { acta: Acta; onVolver: () => 
       : null;
 
   return (
-    <Screen scrollable>
+    <Screen scrollable transicion="adelante">
       <Text style={styles.titulo}>Corregir acta</Text>
       <Text style={styles.cardDetalle}>{acta.dignidad === 'ALCALDIA' ? 'Alcaldía' : 'Prefectura'}</Text>
 
@@ -143,31 +206,54 @@ function FormularioCorreccion({ acta, onVolver }: { acta: Acta; onVolver: () => 
         keyboardType="number-pad"
       />
 
-      {otroError ? <Text style={styles.error}>{otroError}</Text> : null}
+      {otroError ? (
+        <Animated.Text entering={entradaDeBloque} style={styles.error}>
+          {otroError}
+        </Animated.Text>
+      ) : null}
 
       {conflicto ? (
-        <View style={styles.conflicto}>
-          <Text style={styles.conflictoTitulo}>{conflicto.message}</Text>
-          <Text style={styles.cardDetalle}>Versión actual en el servidor (versión {conflicto.versionServidor.version}):</Text>
-          <Text style={styles.cardDetalle}>Nulos: {conflicto.versionServidor.votosNulos}</Text>
-          <Text style={styles.cardDetalle}>Blancos: {conflicto.versionServidor.votosBlancos}</Text>
-          <Text style={styles.cardDetalle}>Total sufragantes: {conflicto.versionServidor.totalSufragantes}</Text>
-          <Button
-            label="Volver a cargar esta versión"
-            variant="outline"
-            onPress={() => {
-              setActaActual(conflicto.versionServidor);
-              setVotos(
-                Object.fromEntries(
-                  Object.entries(conflicto.versionServidor.votosPorOrganizacion).map(([id, v]) => [id, String(v)])
-                )
+        <AlertBanner
+          nivel="critica"
+          titulo="Alguien guardó otra versión de esta acta"
+          mensaje={conflicto.message}
+        >
+          <View style={styles.tabla}>
+            <View style={styles.fila}>
+              <Text style={[styles.celda, styles.celdaCampo, styles.encabezado]}>Campo</Text>
+              <Text style={[styles.celda, styles.encabezado]}>Tu valor</Text>
+              <Text style={[styles.celda, styles.encabezado]}>Servidor (v{conflicto.versionServidor.version})</Text>
+            </View>
+            {[
+              ...organizacionesDignidad.map(({ organizacion }) => ({
+                campo: organizacion.siglas,
+                tuyo: Number(votos[organizacion.id] ?? '0') || 0,
+                servidor: conflicto.versionServidor.votosPorOrganizacion[organizacion.id] ?? 0,
+              })),
+              { campo: 'Nulos', tuyo: Number(votosNulos) || 0, servidor: conflicto.versionServidor.votosNulos },
+              { campo: 'Blancos', tuyo: Number(votosBlancos) || 0, servidor: conflicto.versionServidor.votosBlancos },
+              {
+                campo: 'Sufragantes',
+                tuyo: Number(totalSufragantes) || 0,
+                servidor: conflicto.versionServidor.totalSufragantes,
+              },
+            ].map(({ campo, tuyo, servidor }) => {
+              const difiere = tuyo !== servidor;
+              return (
+                <View key={campo} style={[styles.fila, difiere && styles.filaDifiere]}>
+                  <Text style={[styles.celda, styles.celdaCampo]}>{campo}</Text>
+                  <Text style={[styles.celda, difiere && styles.celdaDifiere]}>{tuyo}</Text>
+                  <Text style={[styles.celda, difiere && styles.celdaDifiere]}>{servidor}</Text>
+                </View>
               );
-              setVotosNulos(String(conflicto.versionServidor.votosNulos));
-              setVotosBlancos(String(conflicto.versionServidor.votosBlancos));
-              setTotalSufragantes(String(conflicto.versionServidor.totalSufragantes));
-            }}
+            })}
+          </View>
+          <Button
+            label="Usar la versión del servidor"
+            variant="outline"
+            onPress={() => cargarVersionDelServidor(conflicto.versionServidor)}
           />
-        </View>
+        </AlertBanner>
       ) : null}
 
       <Button label="Guardar corrección" onPress={guardar} loading={corregirActa.isPending} />
@@ -180,18 +266,17 @@ const styles = StyleSheet.create({
   titulo: { ...typography.h1, color: colors.primary, marginBottom: spacing.md },
   flatList: { flex: 1 },
   lista: { gap: spacing.sm, paddingBottom: spacing.lg },
-  vacio: { ...typography.body, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.md },
-  card: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.md, gap: spacing.xs },
+  intro: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.md },
+  filaTarjeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  datosTarjeta: { gap: spacing.xs },
   cardTitulo: { ...typography.bodyBold, color: colors.textPrimary },
   cardDetalle: { ...typography.caption, color: colors.textSecondary },
   error: { ...typography.body, color: colors.error, textAlign: 'center', marginVertical: spacing.sm },
-  conflicto: {
-    borderWidth: 1,
-    borderColor: colors.error,
-    borderRadius: radius.sm,
-    padding: spacing.md,
-    gap: spacing.xs,
-    marginVertical: spacing.md,
-  },
-  conflictoTitulo: { ...typography.bodyBold, color: colors.error },
+  tabla: { borderRadius: radius.sm, overflow: 'hidden', backgroundColor: colors.background, marginVertical: spacing.xs },
+  fila: { flexDirection: 'row', paddingVertical: spacing.xs, paddingHorizontal: spacing.sm },
+  filaDifiere: { backgroundColor: colors.error + '14' },
+  encabezado: { fontWeight: '700', color: colors.textSecondary },
+  celda: { ...typography.caption, flex: 1, color: colors.textPrimary, textAlign: 'right' },
+  celdaCampo: { textAlign: 'left' },
+  celdaDifiere: { fontWeight: '700', color: colors.error },
 });

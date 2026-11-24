@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ActinMascot, AppIcon, Button, Screen, TextField } from '@core/ui';
+import { ActinMascot, AppIcon, Button, DireccionTransicion, haptics, Screen, TextField, toast } from '@core/ui';
 import { colors, spacing, typography } from '@core/theme';
 import { useIniciarSesion } from '../hooks/useAuth';
 
@@ -18,19 +18,32 @@ type FormValues = z.infer<typeof esquema>;
  * Pantalla de acceso. No hay registro propio (RF-01): solo inicio de
  * sesión y recuperación de clave.
  */
-export function LoginScreen({ onIrARecuperar }: { onIrARecuperar: () => void }) {
+export function LoginScreen({
+  onIrARecuperar,
+  transicion,
+}: {
+  onIrARecuperar: () => void;
+  transicion?: DireccionTransicion;
+}) {
   const { control, handleSubmit, formState } = useForm<FormValues>({
     resolver: zodResolver(esquema),
     defaultValues: { correo: '', clave: '' },
   });
   const iniciarSesion = useIniciarSesion();
 
-  const onSubmit = handleSubmit(({ correo, clave }) => iniciarSesion.mutate({ correo, clave }));
+  const onSubmit = handleSubmit(
+    ({ correo, clave }) =>
+      iniciarSesion.mutate(
+        { correo, clave },
+        { onSuccess: (r) => (r.ok ? toast.exito('Sesión iniciada') : haptics.error()) }
+      ),
+    () => haptics.error()
+  );
 
   const errorDelServidor = iniciarSesion.data && !iniciarSesion.data.ok ? iniciarSesion.data.error.message : null;
 
   return (
-    <Screen scrollable>
+    <Screen scrollable transicion={transicion} fondoMarca>
       <View style={styles.marca}>
         <AppIcon size={28} />
         <Text style={styles.titulo}>ActaYa</Text>

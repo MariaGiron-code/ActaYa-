@@ -3,7 +3,7 @@ import { StyleSheet, Text } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button, Screen, TextField } from '@core/ui';
+import { Button, haptics, Screen, TextField, toast } from '@core/ui';
 import { colors, spacing, typography } from '@core/theme';
 import { useCerrarSesion, useEstablecerClaveInicial } from '../hooks/useAuth';
 
@@ -31,15 +31,20 @@ export function EstablecerClaveInicialScreen() {
   const establecerClave = useEstablecerClaveInicial();
   const cerrarSesion = useCerrarSesion();
 
-  const onSubmit = handleSubmit(({ nuevaClave, confirmacion }) =>
-    establecerClave.mutate({ nuevaClave, confirmacion })
+  const onSubmit = handleSubmit(
+    ({ nuevaClave, confirmacion }) =>
+      establecerClave.mutate(
+        { nuevaClave, confirmacion },
+        { onSuccess: (r) => (r.ok ? toast.exito('Tu clave personal quedó guardada') : haptics.error()) }
+      ),
+    () => haptics.error()
   );
 
   const errorDelServidor =
     establecerClave.data && !establecerClave.data.ok ? establecerClave.data.error.message : null;
 
   return (
-    <Screen scrollable>
+    <Screen scrollable fondoMarca>
       <Text style={styles.titulo}>Crea tu clave personal</Text>
       <Text style={styles.ayuda}>
         A partir de ahora, nadie más que tú conocerá esta clave.

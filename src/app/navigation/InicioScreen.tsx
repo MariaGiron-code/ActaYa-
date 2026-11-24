@@ -1,8 +1,23 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ActinMascot, Button, Screen } from '@core/ui';
+import {
+  ActaIcon,
+  ActinMascot,
+  AgregarPersonaIcon,
+  Card,
+  ChevronRightIcon,
+  EditarIcon,
+  entradaEnLista,
+  GraficoIcon,
+  haptics,
+  PersonasIcon,
+  RecintoIcon,
+  SalirIcon,
+  Screen,
+  toast,
+} from '@core/ui';
 import { colors, spacing, typography } from '@core/theme';
 import { RolUsuario } from '@features/auth/domain/entities/Usuario';
 import { useSessionStore } from '@features/auth/presentation/store/useSessionStore';
@@ -10,93 +25,181 @@ import { useCerrarSesion } from '@features/auth/presentation/hooks/useAuth';
 import { usePrecargarDatosVeedor } from '@features/actas/presentation/hooks/useActas';
 import type { RootStackParamList } from './types';
 
-const PENDIENTES_POR_ROL: Record<RolUsuario, string[]> = {
-  [RolUsuario.COORDINADOR_PROVINCIAL]: [],
-  [RolUsuario.COORDINADOR_RECINTO]: [],
-  [RolUsuario.VEEDOR]: [],
+type Navegacion = NativeStackNavigationProp<RootStackParamList>;
+
+type Accion = {
+  titulo: string;
+  descripcion: string;
+  icono: (color: string) => ReactNode;
+  ir: (navigation: Navegacion) => void;
 };
 
-/**
- * Pantalla temporal: el proyecto base solo trae completo el feature `auth`.
- * Reemplázala por la navegación real de cada rol a medida que completes
- * `territorio`, `personal`, `actas` y `seguimiento`.
- */
+const NOMBRE_ROL: Record<RolUsuario, string> = {
+  [RolUsuario.COORDINADOR_PROVINCIAL]: 'Coordinador provincial',
+  [RolUsuario.COORDINADOR_RECINTO]: 'Coordinador de recinto',
+  [RolUsuario.VEEDOR]: 'Veedor',
+};
+
+/** La primera acción de cada rol es la principal y se muestra destacada. */
+const ACCIONES_POR_ROL: Record<RolUsuario, Accion[]> = {
+  [RolUsuario.COORDINADOR_PROVINCIAL]: [
+    {
+      titulo: 'Seguimiento en vivo',
+      descripcion: 'Mesas reportadas y votos por candidato',
+      icono: (c) => <GraficoIcon color={c} />,
+      ir: (n) => n.navigate('Seguimiento'),
+    },
+    {
+      titulo: 'Recintos',
+      descripcion: 'Consulta y agrega recintos electorales',
+      icono: (c) => <RecintoIcon color={c} />,
+      ir: (n) => n.navigate('Recintos'),
+    },
+    {
+      titulo: 'Crear coordinador de recinto',
+      descripcion: 'Registra a quien coordinará un recinto',
+      icono: (c) => <AgregarPersonaIcon color={c} />,
+      ir: (n) =>
+        n.navigate('CrearUsuario', {
+          rolDeQuienCrea: RolUsuario.COORDINADOR_PROVINCIAL,
+          rolACrear: RolUsuario.COORDINADOR_RECINTO,
+        }),
+    },
+  ],
+  [RolUsuario.COORDINADOR_RECINTO]: [
+    {
+      titulo: 'Mis veedores',
+      descripcion: 'Asigna o reemplaza el veedor de cada mesa',
+      icono: (c) => <PersonasIcon color={c} />,
+      ir: (n) => n.navigate('Asignaciones'),
+    },
+    {
+      titulo: 'Corregir actas',
+      descripcion: 'Revisa y corrige las actas de tu recinto',
+      icono: (c) => <EditarIcon color={c} />,
+      ir: (n) => n.navigate('CorregirActas'),
+    },
+    {
+      titulo: 'Crear veedor',
+      descripcion: 'Registra a una persona nueva como veedor',
+      icono: (c) => <AgregarPersonaIcon color={c} />,
+      ir: (n) =>
+        n.navigate('CrearUsuario', {
+          rolDeQuienCrea: RolUsuario.COORDINADOR_RECINTO,
+          rolACrear: RolUsuario.VEEDOR,
+        }),
+    },
+  ],
+  [RolUsuario.VEEDOR]: [
+    {
+      titulo: 'Registrar actas',
+      descripcion: 'Votos, foto y ubicación de tus mesas',
+      icono: (c) => <ActaIcon color={c} />,
+      ir: (n) => n.navigate('RegistrarActa'),
+    },
+    {
+      titulo: 'Corregir mis actas',
+      descripcion: 'Arregla un acta que ya registraste',
+      icono: (c) => <EditarIcon color={c} />,
+      ir: (n) => n.navigate('CorregirActas'),
+    },
+  ],
+};
+
+/** Centro de la app: saludo con Actín y las acciones del rol como tarjetas. */
 export function InicioScreen() {
   const usuario = useSessionStore((s) => s.usuario);
   const cerrarSesion = useCerrarSesion();
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<Navegacion>();
   usePrecargarDatosVeedor(usuario?.rol === RolUsuario.VEEDOR ? usuario.id : null);
 
   if (!usuario) return null;
 
+  const acciones = ACCIONES_POR_ROL[usuario.rol];
+
   return (
-    <Screen scrollable>
-      <View style={styles.mascota}>
-        <ActinMascot size={120} />
-      </View>
-      <Text style={styles.saludo}>Hola, {usuario.nombres}</Text>
-      <Text style={styles.rol}>{usuario.rol.replace('_', ' ')}</Text>
-
-      {usuario.rol === RolUsuario.COORDINADOR_PROVINCIAL ? (
-        <>
-          <Button label="Ver seguimiento" onPress={() => navigation.navigate('Seguimiento')} />
-          <Button label="Ver recintos" variant="outline" onPress={() => navigation.navigate('Recintos')} />
-          <Button
-            label="Crear coordinador de recinto"
-            variant="outline"
-            onPress={() =>
-              navigation.navigate('CrearUsuario', {
-                rolDeQuienCrea: RolUsuario.COORDINADOR_PROVINCIAL,
-                rolACrear: RolUsuario.COORDINADOR_RECINTO,
-              })
-            }
-          />
-        </>
-      ) : null}
-
-      {usuario.rol === RolUsuario.COORDINADOR_RECINTO ? (
-        <>
-          <Button label="Mis veedores" onPress={() => navigation.navigate('Asignaciones')} />
-          <Button label="Corregir actas" variant="outline" onPress={() => navigation.navigate('CorregirActas')} />
-          <Button
-            label="Crear veedor"
-            variant="outline"
-            onPress={() =>
-              navigation.navigate('CrearUsuario', {
-                rolDeQuienCrea: RolUsuario.COORDINADOR_RECINTO,
-                rolACrear: RolUsuario.VEEDOR,
-              })
-            }
-          />
-        </>
-      ) : null}
-
-      {usuario.rol === RolUsuario.VEEDOR ? (
-        <>
-          <Button label="Registrar actas" onPress={() => navigation.navigate('RegistrarActa')} />
-          <Button label="Corregir mis actas" variant="outline" onPress={() => navigation.navigate('CorregirActas')} />
-        </>
-      ) : null}
-
-      <View style={styles.lista}>
-        <Text style={styles.subtitulo}>Por construir para tu rol:</Text>
-        {PENDIENTES_POR_ROL[usuario.rol].map((item) => (
-          <Text key={item} style={styles.item}>
-            •{'  '}{item}
-          </Text>
-        ))}
+    <Screen scrollable fondoMarca>
+      <View style={styles.saludo}>
+        <ActinMascot size={104} />
+        <View style={styles.textosSaludo}>
+          <Text style={styles.hola}>Hola, {usuario.nombres}</Text>
+          <View style={styles.chipRol}>
+            <Text style={styles.textoRol}>{NOMBRE_ROL[usuario.rol]}</Text>
+          </View>
+        </View>
       </View>
 
-      <Button label="Cerrar sesión" variant="outline" onPress={() => cerrarSesion.mutate()} />
+      <Text style={styles.pregunta}>¿Qué quieres hacer?</Text>
+
+      <View style={styles.acciones}>
+        {acciones.map((accion, i) => {
+          const destacada = i === 0;
+          const colorIcono = destacada ? colors.textOnPrimary : colors.primary;
+          return (
+            <Card
+              key={accion.titulo}
+              entering={entradaEnLista(i)}
+              destacada={destacada}
+              icono={accion.icono(colorIcono)}
+              onPress={() => accion.ir(navigation)}
+              accessibilityLabel={`${accion.titulo}. ${accion.descripcion}`}
+              style={styles.contenidoAccion}
+            >
+              <View style={styles.textosAccion}>
+                <Text style={[styles.tituloAccion, destacada && styles.textoDestacado]}>{accion.titulo}</Text>
+                <Text style={[styles.descripcionAccion, destacada && styles.descripcionDestacada]}>
+                  {accion.descripcion}
+                </Text>
+              </View>
+              <ChevronRightIcon color={colorIcono} />
+            </Card>
+          );
+        })}
+      </View>
+
+      <Pressable
+        style={styles.salir}
+        accessibilityRole="button"
+        disabled={cerrarSesion.isPending}
+        onPress={() => {
+          haptics.tap();
+          cerrarSesion.mutate(undefined, { onSuccess: () => toast.info('Cerraste sesión') });
+        }}
+      >
+        <SalirIcon />
+        <Text style={styles.textoSalir}>{cerrarSesion.isPending ? 'Cerrando sesión…' : 'Cerrar sesión'}</Text>
+      </Pressable>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  mascota: { alignItems: 'center', marginTop: spacing.sm },
-  saludo: { ...typography.h1, marginTop: spacing.lg },
-  rol: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xl },
-  subtitulo: { ...typography.h3, marginBottom: spacing.sm },
-  lista: { flex: 1, gap: spacing.xs },
-  item: { ...typography.body, color: colors.textPrimary },
+  saludo: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.md },
+  textosSaludo: { flex: 1, gap: spacing.xs },
+  hola: { ...typography.h2, color: colors.primary },
+  chipRol: {
+    alignSelf: 'flex-start',
+    backgroundColor: colors.accent + '33',
+    borderRadius: 999,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  textoRol: { ...typography.caption, color: colors.textPrimary, fontWeight: '700' },
+  pregunta: { ...typography.h3, color: colors.textPrimary, marginTop: spacing.xl, marginBottom: spacing.sm },
+  acciones: { gap: spacing.sm },
+  contenidoAccion: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  textosAccion: { flex: 1, gap: 2 },
+  tituloAccion: { ...typography.bodyBold, color: colors.textPrimary },
+  descripcionAccion: { ...typography.caption, color: colors.textSecondary },
+  textoDestacado: { color: colors.textOnPrimary },
+  descripcionDestacada: { color: colors.textOnPrimary, opacity: 0.85 },
+  salir: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xl,
+    minHeight: 48,
+  },
+  textoSalir: { ...typography.body, color: colors.textSecondary },
 });

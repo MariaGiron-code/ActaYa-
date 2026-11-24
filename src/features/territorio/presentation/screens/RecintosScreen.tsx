@@ -1,10 +1,24 @@
 import React, { useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button, FeedbackState, Screen, TextField } from '@core/ui';
-import { colors, radius, spacing, typography } from '@core/theme';
+import Animated from 'react-native-reanimated';
+import {
+  animaciones,
+  Button,
+  Card,
+  entradaDeBloque,
+  entradaEnLista,
+  FeedbackState,
+  haptics,
+  Screen,
+  TextField,
+  toast,
+  EmptyState,
+  RecintoIcon,
+} from '@core/ui';
+import { colors, spacing, typography } from '@core/theme';
 import { useSessionStore, selectRol } from '@features/auth/presentation/store/useSessionStore';
 import { RolUsuario } from '@features/auth/domain/entities/Usuario';
 import { useAgregarRecinto, useRecintos } from '../hooks/useTerritorio';
@@ -30,13 +44,13 @@ export function RecintosScreen() {
 
   return (
     <Screen>
-      <Text style={styles.titulo}>Recintos electorales</Text>
+      <Text style={styles.intro}>Recintos electorales habilitados para la jornada.</Text>
 
       {recintos.isLoading ? (
-        <FeedbackState source={require('../../../../../assets/lottie/cargando.json')} message="Cargando recintos…" loop />
+        <FeedbackState source={animaciones.cargando} message="Cargando recintos…" loop />
       ) : recintos.data && !recintos.data.ok ? (
         <FeedbackState
-          source={require('../../../../../assets/lottie/error.json')}
+          source={animaciones.error}
           message={recintos.data.error.message}
         />
       ) : (
@@ -45,9 +59,9 @@ export function RecintosScreen() {
           data={recintos.data?.value ?? []}
           keyExtractor={(item) => item.id}
           ListEmptyComponent={
-            <Text style={styles.vacio}>Aún no hay recintos precargados.</Text>
+            <EmptyState titulo="Aún no hay recintos" mensaje="Los recintos precargados aparecerán aquí." />
           }
-          renderItem={({ item }) => <RecintoCard recinto={item} />}
+          renderItem={({ item, index }) => <RecintoCard recinto={item} indice={index} />}
           contentContainerStyle={styles.lista}
         />
       )}
@@ -63,14 +77,14 @@ export function RecintosScreen() {
   );
 }
 
-function RecintoCard({ recinto }: { recinto: Recinto }) {
+function RecintoCard({ recinto, indice }: { recinto: Recinto; indice: number }) {
   return (
-    <View style={styles.card}>
+    <Card entering={entradaEnLista(indice)} icono={<RecintoIcon />}>
       <Text style={styles.cardNombre}>{recinto.nombre}</Text>
       <Text style={styles.cardDetalle}>
         {recinto.parroquia}, {recinto.canton} — {recinto.provincia}
       </Text>
-    </View>
+    </Card>
   );
 }
 
@@ -82,22 +96,28 @@ function FormularioAgregarRecinto({ onCerrar }: { onCerrar: () => void }) {
   });
   const agregarRecinto = useAgregarRecinto(rol);
 
-  const onSubmit = handleSubmit((datos) => {
-    agregarRecinto.mutate(datos, {
-      onSuccess: (resultado) => {
-        if (resultado.ok) {
-          reset();
-          onCerrar();
-        }
-      },
-    });
-  });
+  const onSubmit = handleSubmit(
+    (datos) => {
+      agregarRecinto.mutate(datos, {
+        onSuccess: (resultado) => {
+          if (resultado.ok) {
+            toast.exito(`Recinto «${datos.nombre}» agregado`);
+            reset();
+            onCerrar();
+          } else {
+            haptics.error();
+          }
+        },
+      });
+    },
+    () => haptics.error()
+  );
 
   const errorDelServidor =
     agregarRecinto.data && !agregarRecinto.data.ok ? agregarRecinto.data.error.message : null;
 
   return (
-    <View style={styles.formulario}>
+    <Animated.View entering={entradaDeBloque} style={styles.formulario}>
       <Controller
         control={control}
         name="provincia"
@@ -151,7 +171,7 @@ function FormularioAgregarRecinto({ onCerrar }: { onCerrar: () => void }) {
 
       <Button label="Guardar" onPress={onSubmit} loading={agregarRecinto.isPending} />
       <Button label="Cancelar" variant="outline" onPress={onCerrar} />
-    </View>
+    </Animated.View>
   );
 }
 
@@ -159,13 +179,7 @@ const styles = StyleSheet.create({
   titulo: { ...typography.h1, color: colors.primary, marginBottom: spacing.md },
   flatList: { flex: 1 },
   lista: { gap: spacing.sm, paddingBottom: spacing.lg },
-  vacio: { ...typography.body, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xl },
-  card: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.sm,
-    padding: spacing.md,
-  },
+  intro: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.md },
   cardNombre: { ...typography.bodyBold, color: colors.textPrimary },
   cardDetalle: { ...typography.caption, color: colors.textSecondary, marginTop: spacing.xs },
   formulario: { gap: spacing.sm, marginTop: spacing.md },

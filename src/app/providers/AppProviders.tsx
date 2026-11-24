@@ -2,6 +2,7 @@ import React, { PropsWithChildren } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { ToastHost } from '@core/ui';
 import { asyncStoragePersister, queryClient } from './queryClient';
 
 /**
@@ -19,6 +20,7 @@ export function AppProviders({ children }: PropsWithChildren) {
           persistOptions={{ persister: asyncStoragePersister }}
         >
           {children}
+          <ToastHost />
         </PersistQueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

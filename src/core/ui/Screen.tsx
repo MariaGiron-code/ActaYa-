@@ -1,7 +1,10 @@
 import React, { PropsWithChildren } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated from 'react-native-reanimated';
 import { colors, spacing } from '@core/theme';
+import { DireccionTransicion, entradaDeVista } from './transiciones';
+import { FondoMarca } from './FondoMarca';
 
 type ScreenProps = PropsWithChildren<{
   style?: ViewStyle;
@@ -19,10 +22,25 @@ type ScreenProps = PropsWithChildren<{
    * nested inside plain ScrollViews".
    */
   scrollable?: boolean;
+  /**
+   * Animación de entrada al cambiar de vista DENTRO de una misma ruta (lista
+   * -> formulario). Déjala sin definir en la primera vista de una ruta: el
+   * stack nativo ya anima esa entrada y se vería doble.
+   */
+  transicion?: DireccionTransicion;
+  /** Ola y acentos de marca detrás del contenido (solo pantallas sin header). */
+  fondoMarca?: boolean;
 }>;
 
 /** Contenedor base de pantalla: respeta notch/status bar y fondo consistente. */
-export function Screen({ children, style, padded = true, scrollable = false }: ScreenProps) {
+export function Screen({
+  children,
+  style,
+  padded = true,
+  scrollable = false,
+  transicion,
+  fondoMarca = false,
+}: ScreenProps) {
   const contenido = scrollable ? (
     <KeyboardAvoidingView
       style={styles.container}
@@ -41,13 +59,20 @@ export function Screen({ children, style, padded = true, scrollable = false }: S
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      {contenido}
+      {fondoMarca ? <FondoMarca /> : null}
+      {transicion ? (
+        <Animated.View entering={entradaDeVista(transicion)} style={styles.container}>
+          {contenido}
+        </Animated.View>
+      ) : (
+        contenido
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.background },
+  safeArea: { flex: 1, backgroundColor: colors.background, overflow: 'hidden' },
   container: { flex: 1 },
   scrollContent: { flexGrow: 1, paddingBottom: spacing.xl },
   padded: { paddingHorizontal: spacing.lg, paddingTop: spacing.md },

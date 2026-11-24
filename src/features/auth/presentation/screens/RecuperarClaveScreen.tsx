@@ -3,7 +3,7 @@ import { StyleSheet, Text } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button, Screen, TextField } from '@core/ui';
+import { animaciones, Button, DireccionTransicion, FeedbackState, haptics, Screen, TextField } from '@core/ui';
 import { colors, spacing, typography } from '@core/theme';
 import { useRecuperarClave } from '../hooks/useAuth';
 
@@ -11,7 +11,13 @@ const esquema = z.object({ correo: z.string().email('Correo no válido') });
 type FormValues = z.infer<typeof esquema>;
 
 /** RF-05: nadie depende del coordinador para recuperar su acceso. */
-export function RecuperarClaveScreen({ onVolver }: { onVolver: () => void }) {
+export function RecuperarClaveScreen({
+  onVolver,
+  transicion,
+}: {
+  onVolver: () => void;
+  transicion?: DireccionTransicion;
+}) {
   const { control, handleSubmit, formState } = useForm<FormValues>({
     resolver: zodResolver(esquema),
     defaultValues: { correo: '' },
@@ -19,8 +25,19 @@ export function RecuperarClaveScreen({ onVolver }: { onVolver: () => void }) {
   const recuperarClave = useRecuperarClave();
   const [enviado, setEnviado] = useState(false);
 
-  const onSubmit = handleSubmit(({ correo }) =>
-    recuperarClave.mutate(correo, { onSuccess: (r) => r.ok && setEnviado(true) })
+  const onSubmit = handleSubmit(
+    ({ correo }) =>
+      recuperarClave.mutate(correo, {
+        onSuccess: (r) => {
+          if (r.ok) {
+            haptics.exito();
+            setEnviado(true);
+          } else {
+            haptics.error();
+          }
+        },
+      }),
+    () => haptics.error()
   );
 
   const errorDelServidor =
@@ -28,7 +45,8 @@ export function RecuperarClaveScreen({ onVolver }: { onVolver: () => void }) {
 
   if (enviado) {
     return (
-      <Screen scrollable>
+      <Screen scrollable transicion="aparecer" fondoMarca>
+        <FeedbackState source={animaciones.exito} size={120} />
         <Text style={styles.titulo}>Revisa tu correo</Text>
         <Text style={styles.ayuda}>Te enviamos un enlace para crear una nueva clave.</Text>
         <Button label="Volver al inicio" variant="outline" onPress={onVolver} />
@@ -37,7 +55,7 @@ export function RecuperarClaveScreen({ onVolver }: { onVolver: () => void }) {
   }
 
   return (
-    <Screen scrollable>
+    <Screen scrollable transicion={transicion} fondoMarca>
       <Text style={styles.titulo}>Recuperar acceso</Text>
       <Controller
         control={control}

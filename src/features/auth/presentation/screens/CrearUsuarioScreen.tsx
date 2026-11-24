@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button, Screen, TextField } from '@core/ui';
+import { animaciones, Button, FeedbackState, haptics, Screen, TextField } from '@core/ui';
 import { colors, radius, spacing, typography } from '@core/theme';
 import { esFormatoCedulaValido } from '@core/validation/cedula';
 import { useRecintos } from '@features/territorio/presentation/hooks/useTerritorio';
@@ -47,18 +47,23 @@ export function CrearUsuarioScreen({ rolDeQuienCrea, rolACrear }: Props) {
   const [claveTemporal, setClaveTemporal] = useState<string | null>(null);
   const recintoIdSeleccionado = useWatch({ control, name: 'recintoId' });
 
-  const onSubmit = handleSubmit((datos) =>
-    crearUsuario.mutate(
-      { ...datos, rol: rolACrear },
-      {
-        onSuccess: (resultado) => {
-          if (resultado.ok) {
-            setClaveTemporal(resultado.value.claveTemporal);
-            reset();
-          }
-        },
-      }
-    )
+  const onSubmit = handleSubmit(
+    (datos) =>
+      crearUsuario.mutate(
+        { ...datos, rol: rolACrear },
+        {
+          onSuccess: (resultado) => {
+            if (resultado.ok) {
+              haptics.exito();
+              setClaveTemporal(resultado.value.claveTemporal);
+              reset();
+            } else {
+              haptics.error();
+            }
+          },
+        }
+      ),
+    () => haptics.error()
   );
 
   const errorDelServidor =
@@ -67,6 +72,7 @@ export function CrearUsuarioScreen({ rolDeQuienCrea, rolACrear }: Props) {
   if (claveTemporal) {
     return (
       <Screen scrollable>
+        <FeedbackState source={animaciones.exito} size={120} />
         <Text style={styles.titulo}>Cuenta creada</Text>
         <Text style={styles.ayuda}>
           Entrega esta clave temporal a la persona. Solo se mostrará esta vez (S-11):
@@ -79,7 +85,9 @@ export function CrearUsuarioScreen({ rolDeQuienCrea, rolACrear }: Props) {
 
   return (
     <Screen scrollable>
-      <Text style={styles.titulo}>Registrar persona</Text>
+      <Text style={styles.titulo}>
+        {rolACrear === RolUsuario.VEEDOR ? 'Nuevo veedor' : 'Nuevo coordinador de recinto'}
+      </Text>
 
       <Controller
         control={control}
@@ -159,7 +167,7 @@ const styles = StyleSheet.create({
   titulo: { ...typography.h2, marginTop: spacing.lg, marginBottom: spacing.md },
   ayuda: { ...typography.body, marginBottom: spacing.md },
   claveTemporal: { ...typography.h1, textAlign: 'center', marginBottom: spacing.lg },
-  errorServidor: { ...typography.body, color: '#D90B1C', textAlign: 'center', marginBottom: spacing.sm },
+  errorServidor: { ...typography.body, color: colors.error, textAlign: 'center', marginBottom: spacing.sm },
   wrapper: { marginBottom: spacing.md },
   label: { ...typography.bodyBold, color: colors.textPrimary, marginBottom: spacing.xs },
   opcion: {

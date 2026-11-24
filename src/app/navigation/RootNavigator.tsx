@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { NavigationContainer, RouteProp } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { FeedbackState, Screen } from '@core/ui';
+import { createNativeStackNavigator, NativeStackNavigationOptions } from '@react-navigation/native-stack';
+import { StatusBar } from 'expo-status-bar';
+import { animaciones, DireccionTransicion, FeedbackState, Screen } from '@core/ui';
+import { colors, typography } from '@core/theme';
 import { useSessionStore } from '@features/auth/presentation/store/useSessionStore';
 import { useSesionActual } from '@features/auth/presentation/hooks/useAuth';
 import { useManejarEnlaceRecuperacion } from '@features/auth/presentation/hooks/useManejarEnlaceRecuperacion';
@@ -19,6 +21,22 @@ import { InicioScreen } from './InicioScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+/** Header de marca: barra azul, título y flecha de volver en blanco. */
+const opcionesDePantalla: NativeStackNavigationOptions = {
+  headerShown: false,
+  headerStyle: { backgroundColor: colors.primary },
+  headerTintColor: colors.textOnPrimary,
+  headerTitleStyle: { fontSize: typography.h3.fontSize, fontWeight: typography.h3.fontWeight },
+  headerShadowVisible: false,
+  headerBackButtonDisplayMode: 'minimal',
+  // Misma transición en Android e iOS (Android por defecto hace un fade corto).
+  animation: 'slide_from_right',
+  fullScreenGestureEnabled: true,
+};
+
+/** Cambios de sesión (entrar, salir, poner clave): fundido, no "avanzar". */
+const OPCIONES_CAMBIO_DE_SESION: NativeStackNavigationOptions = { animation: 'fade' };
+
 /** Adapta `CrearUsuarioScreen` (recibe props directas) a la ruta (recibe params). */
 function CrearUsuarioRoute({ route }: { route: RouteProp<RootStackParamList, 'CrearUsuario'> }) {
   return <CrearUsuarioScreen rolDeQuienCrea={route.params.rolDeQuienCrea} rolACrear={route.params.rolACrear} />;
@@ -26,10 +44,25 @@ function CrearUsuarioRoute({ route }: { route: RouteProp<RootStackParamList, 'Cr
 
 function AuthFlow() {
   const [mostrarRecuperar, setMostrarRecuperar] = useState(false);
+  // undefined en el primer montaje: la entrada inicial ya la anima el stack.
+  const [transicion, setTransicion] = useState<DireccionTransicion>();
+
   return mostrarRecuperar ? (
-    <RecuperarClaveScreen onVolver={() => setMostrarRecuperar(false)} />
+    <RecuperarClaveScreen
+      transicion={transicion}
+      onVolver={() => {
+        setTransicion('atras');
+        setMostrarRecuperar(false);
+      }}
+    />
   ) : (
-    <LoginScreen onIrARecuperar={() => setMostrarRecuperar(true)} />
+    <LoginScreen
+      transicion={transicion}
+      onIrARecuperar={() => {
+        setTransicion('adelante');
+        setMostrarRecuperar(true);
+      }}
+    />
   );
 }
 
@@ -50,7 +83,7 @@ export function RootNavigator() {
     return (
       <Screen>
         <FeedbackState
-          source={require('../../../assets/lottie/cargando.json')}
+          source={animaciones.cargando}
           message="Cargando ActaYa…"
           loop
         />
@@ -60,14 +93,28 @@ export function RootNavigator() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator
+        screenOptions={opcionesDePantalla}
+        // Íconos de la barra de estado en blanco sobre el header azul, y
+        // oscuros en las pantallas sin header (fondo blanco).
+        screenLayout={({ options, children }) => (
+          <>
+            <StatusBar style={options.headerShown ? 'light' : 'dark'} />
+            {children}
+          </>
+        )}
+      >
         {!usuario ? (
-          <Stack.Screen name="Auth" component={AuthFlow} />
+          <Stack.Screen name="Auth" component={AuthFlow} options={OPCIONES_CAMBIO_DE_SESION} />
         ) : usuario.debeCambiarClave || enRecuperacion ? (
-          <Stack.Screen name="EstablecerClaveInicial" component={EstablecerClaveInicialScreen} />
+          <Stack.Screen
+            name="EstablecerClaveInicial"
+            component={EstablecerClaveInicialScreen}
+            options={OPCIONES_CAMBIO_DE_SESION}
+          />
         ) : (
           <>
-            <Stack.Screen name="Inicio" component={InicioScreen} />
+            <Stack.Screen name="Inicio" component={InicioScreen} options={OPCIONES_CAMBIO_DE_SESION} />
             <Stack.Screen
               name="Recintos"
               component={RecintosScreen}

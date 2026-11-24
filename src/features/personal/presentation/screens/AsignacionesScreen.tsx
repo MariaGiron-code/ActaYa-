@@ -1,10 +1,23 @@
 import React, { useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button, FeedbackState, Screen, TextField } from '@core/ui';
-import { colors, radius, spacing, typography } from '@core/theme';
+import Animated from 'react-native-reanimated';
+import {
+  animaciones,
+  Button,
+  Card,
+  entradaDeBloque,
+  entradaEnLista,
+  FeedbackState,
+  haptics,
+  Screen,
+  TextField,
+  toast,
+  EmptyState,
+} from '@core/ui';
+import { colors, spacing, typography } from '@core/theme';
 import { esFormatoCedulaValido } from '@core/validation/cedula';
 import { useSessionStore } from '@features/auth/presentation/store/useSessionStore';
 import { useSubordinados } from '@features/auth/presentation/hooks/useAuth';
@@ -42,9 +55,10 @@ export function AsignacionesScreen() {
   if (!recintoId) {
     return (
       <Screen>
-        <Text style={styles.vacio}>
-          Tu cuenta todavía no tiene un recinto asignado. Pídele al coordinador provincial que lo configure.
-        </Text>
+        <EmptyState
+          titulo="Aún no tienes un recinto"
+          mensaje="Pídele al coordinador provincial que configure el recinto que vas a coordinar."
+        />
       </Screen>
     );
   }
@@ -54,11 +68,11 @@ export function AsignacionesScreen() {
 
   return (
     <Screen>
-      <Text style={styles.titulo}>Mis veedores</Text>
+      <Text style={styles.intro}>Asigna un veedor a cada mesa de tu recinto.</Text>
 
       {mesas.isLoading || asignaciones.isLoading ? (
         <FeedbackState
-          source={require('../../../../../assets/lottie/cargando.json')}
+          source={animaciones.cargando}
           message="Cargando mesas…"
           loop
         />
@@ -67,14 +81,17 @@ export function AsignacionesScreen() {
           style={styles.flatList}
           data={mesas.data?.ok ? mesas.data.value : []}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
+          renderItem={({ item, index }) => (
             <MesaRow
+              indice={index}
               mesa={item}
               asignacionActiva={asignacionesActivas.find((a) => a.mesaId === item.id) ?? null}
               veedores={veedores}
             />
           )}
-          ListEmptyComponent={<Text style={styles.vacio}>No hay mesas precargadas para tu recinto.</Text>}
+          ListEmptyComponent={
+            <EmptyState titulo="Tu recinto no tiene mesas" mensaje="Las mesas precargadas aparecerán aquí." />
+          }
           contentContainerStyle={styles.lista}
         />
       )}
@@ -83,10 +100,12 @@ export function AsignacionesScreen() {
 }
 
 function MesaRow({
+  indice,
   mesa,
   asignacionActiva,
   veedores,
 }: {
+  indice: number;
   mesa: Mesa;
   asignacionActiva: AsignacionVeedor | null;
   veedores: Usuario[];
@@ -99,25 +118,39 @@ function MesaRow({
   const veedorAsignado = asignacionActiva ? veedores.find((v) => v.id === asignacionActiva.veedorId) : null;
 
   function elegirExistente(veedorId: string) {
+    const veedor = veedores.find((v) => v.id === veedorId);
+    const nombre = veedor ? `${veedor.nombres} ${veedor.apellidos}` : 'El veedor';
+    const alTerminar = (ok: boolean, mensajeExito: string) => {
+      if (ok) {
+        toast.exito(mensajeExito);
+        setModoEdicion('ninguno');
+      } else {
+        haptics.error();
+      }
+    };
+
     if (asignacionActiva) {
       reemplazarVeedor.mutate(
         { asignacionActualId: asignacionActiva.id, reemplazo: { tipo: 'existente', veedorId } },
-        { onSuccess: (r) => r.ok && setModoEdicion('ninguno') }
+        { onSuccess: (r) => alTerminar(r.ok, `${nombre} reemplaza al veedor de la mesa ${mesa.numeroJrv}`) }
       );
     } else {
-      asignarVeedor.mutate({ mesaId: mesa.id, veedorId }, { onSuccess: (r) => r.ok && setModoEdicion('ninguno') });
+      asignarVeedor.mutate(
+        { mesaId: mesa.id, veedorId },
+        { onSuccess: (r) => alTerminar(r.ok, `${nombre} quedó asignado a la mesa ${mesa.numeroJrv}`) }
+      );
     }
   }
 
   return (
-    <View style={styles.card}>
+    <Card entering={entradaEnLista(indice)}>
       <Text style={styles.cardTitulo}>Mesa {mesa.numeroJrv}</Text>
       <Text style={styles.cardDetalle}>
         {veedorAsignado ? `Veedor: ${veedorAsignado.nombres} ${veedorAsignado.apellidos}` : 'Sin veedor asignado'}
       </Text>
 
       {modoEdicion === 'ninguno' ? (
-        <View style={styles.acciones}>
+        <Animated.View key="ninguno" entering={entradaDeBloque} style={styles.acciones}>
           <Button
             label={asignacionActiva ? 'Reemplazar (existente)' : 'Asignar (existente)'}
             variant="outline"
@@ -126,38 +159,49 @@ function MesaRow({
           {asignacionActiva ? (
             <Button label="Reemplazar (persona nueva)" variant="outline" onPress={() => setModoEdicion('nuevo')} />
           ) : null}
-        </View>
+        </Animated.View>
       ) : modoEdicion === 'existente' ? (
-        <View style={styles.acciones}>
+        <Animated.View key="existente" entering={entradaDeBloque} style={styles.acciones}>
           {veedores.length === 0 ? (
             <Text style={styles.vacio}>Aún no has creado ningún veedor.</Text>
           ) : (
             veedores.map((v) => (
-              <Pressable key={v.id} style={styles.opcion} onPress={() => elegirExistente(v.id)}>
+              <Card
+                key={v.id}
+                compacta
+                onPress={() => elegirExistente(v.id)}
+                accessibilityLabel={`Elegir a ${v.nombres} ${v.apellidos}`}
+              >
                 <Text style={styles.opcionTexto}>
                   {v.nombres} {v.apellidos}
                 </Text>
-              </Pressable>
+              </Card>
             ))
           )}
           <Button label="Cancelar" variant="outline" onPress={() => setModoEdicion('ninguno')} />
-        </View>
+        </Animated.View>
       ) : (
-        <FormularioVeedorNuevo
-          asignacionActualId={asignacionActiva!.id}
-          reemplazarVeedor={reemplazarVeedor}
-          onCancelar={() => setModoEdicion('ninguno')}
-          onExito={() => setModoEdicion('ninguno')}
-        />
+        <Animated.View key="nuevo" entering={entradaDeBloque}>
+          <FormularioVeedorNuevo
+            asignacionActualId={asignacionActiva!.id}
+            reemplazarVeedor={reemplazarVeedor}
+            onCancelar={() => setModoEdicion('ninguno')}
+            onExito={() => setModoEdicion('ninguno')}
+          />
+        </Animated.View>
       )}
 
       {asignarVeedor.data && !asignarVeedor.data.ok ? (
-        <Text style={styles.error}>{asignarVeedor.data.error.message}</Text>
+        <Animated.Text entering={entradaDeBloque} style={styles.error}>
+          {asignarVeedor.data.error.message}
+        </Animated.Text>
       ) : null}
       {reemplazarVeedor.data && !reemplazarVeedor.data.ok ? (
-        <Text style={styles.error}>{reemplazarVeedor.data.error.message}</Text>
+        <Animated.Text entering={entradaDeBloque} style={styles.error}>
+          {reemplazarVeedor.data.error.message}
+        </Animated.Text>
       ) : null}
-    </View>
+    </Card>
   );
 }
 
@@ -178,19 +222,29 @@ function FormularioVeedorNuevo({
   });
   const [claveTemporal, setClaveTemporal] = useState<string | null>(null);
 
-  const onSubmit = handleSubmit((datos) =>
-    reemplazarVeedor.mutate(
-      { asignacionActualId, reemplazo: { tipo: 'nuevo', datos } },
-      {
-        onSuccess: (r) => {
-          if (!r.ok) return;
-          // S-11: si por algo no viniera la clave, no hay nada que mostrar —
-          // se cierra el formulario igual que antes en vez de dejarlo colgado.
-          if (r.value.claveTemporal) setClaveTemporal(r.value.claveTemporal);
-          else onExito();
-        },
-      }
-    )
+  const onSubmit = handleSubmit(
+    (datos) =>
+      reemplazarVeedor.mutate(
+        { asignacionActualId, reemplazo: { tipo: 'nuevo', datos } },
+        {
+          onSuccess: (r) => {
+            if (!r.ok) {
+              haptics.error();
+              return;
+            }
+            // S-11: si por algo no viniera la clave, no hay nada que mostrar —
+            // se cierra el formulario igual que antes en vez de dejarlo colgado.
+            if (r.value.claveTemporal) {
+              haptics.exito();
+              setClaveTemporal(r.value.claveTemporal);
+            } else {
+              toast.exito('Veedor reemplazado');
+              onExito();
+            }
+          },
+        }
+      ),
+    () => haptics.error()
   );
 
   if (claveTemporal) {
@@ -279,15 +333,13 @@ function FormularioVeedorNuevo({
 }
 
 const styles = StyleSheet.create({
-  titulo: { ...typography.h1, color: colors.primary, marginBottom: spacing.md },
+  intro: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.md },
   flatList: { flex: 1 },
   lista: { gap: spacing.sm, paddingBottom: spacing.lg },
   vacio: { ...typography.body, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.md },
-  card: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.md, gap: spacing.xs },
   cardTitulo: { ...typography.bodyBold, color: colors.textPrimary },
   cardDetalle: { ...typography.caption, color: colors.textSecondary },
   acciones: { gap: spacing.xs, marginTop: spacing.sm },
-  opcion: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.sm },
   opcionTexto: { ...typography.body, color: colors.textPrimary },
   error: { ...typography.caption, color: colors.error, marginTop: spacing.xs },
   claveTemporal: { ...typography.h2, color: colors.primary, textAlign: 'center', marginVertical: spacing.sm },

@@ -1,6 +1,26 @@
 import React, { useMemo, useState } from 'react';
 import { FlatList, Image, StyleSheet, Text, View } from 'react-native';
-import { Button, FeedbackState, Screen, StatusBadge, TextField } from '@core/ui';
+import Animated, { ZoomIn } from 'react-native-reanimated';
+import {
+  AlertBanner,
+  animaciones,
+  Button,
+  Card,
+  ChevronRightIcon,
+  DireccionTransicion,
+  entradaDeBloque,
+  entradaDeVista,
+  entradaEnLista,
+  FeedbackState,
+  haptics,
+  Screen,
+  StatusBadge,
+  TextField,
+  toast,
+  transicionDeLayout,
+  EmptyState,
+  UrnaIcon,
+} from '@core/ui';
 import { colors, radius, spacing, typography } from '@core/theme';
 import { useSessionStore } from '@features/auth/presentation/store/useSessionStore';
 import { useMisAsignaciones } from '@features/personal/presentation/hooks/usePersonal';
@@ -31,6 +51,7 @@ export function RegistrarActaScreen() {
   const usuario = useSessionStore((s) => s.usuario);
   const misAsignaciones = useMisAsignaciones(usuario?.id ?? null);
   const [asignacionSeleccionada, setAsignacionSeleccionada] = useState<AsignacionVeedor | null>(null);
+  const [transicion, setTransicion] = useState<DireccionTransicion>();
   const alertaDemora = useAlertaDemoraRegistro(usuario?.id ?? null);
 
   useSincronizarActasAlVolverOnline();
@@ -39,12 +60,12 @@ export function RegistrarActaScreen() {
 
   if (!asignacionSeleccionada) {
     return (
-      <Screen>
+      <Screen transicion={transicion}>
         <Text style={styles.titulo}>Mis mesas</Text>
         <AlertaDemoraBanner alerta={alertaDemora} />
         {misAsignaciones.isLoading ? (
           <FeedbackState
-            source={require('../../../../../assets/lottie/cargando.json')}
+            source={animaciones.cargando}
             message="Cargando tus mesas…"
             loop
           />
@@ -53,12 +74,26 @@ export function RegistrarActaScreen() {
             style={styles.flatList}
             data={misAsignaciones.data?.ok ? misAsignaciones.data.value : []}
             keyExtractor={(item) => item.id}
-            ListEmptyComponent={<Text style={styles.vacio}>Todavía no tienes mesas asignadas.</Text>}
-            renderItem={({ item }) => (
-              <View style={styles.card}>
+            ListEmptyComponent={
+              <EmptyState
+                titulo="Todavía no tienes mesas"
+                mensaje="Tu coordinador de recinto te asignará una mesa. Aparecerá aquí."
+              />
+            }
+            renderItem={({ item, index }) => (
+              <Card
+                entering={entradaEnLista(index)}
+                icono={<UrnaIcon />}
+                onPress={() => setAsignacionSeleccionada(item)}
+                accessibilityLabel="Registrar acta de esta mesa"
+                style={styles.cardFila}
+              >
                 <MesaLabel mesaId={item.mesaId} />
-                <Button label="Registrar acta" onPress={() => setAsignacionSeleccionada(item)} />
-              </View>
+                <View style={styles.accionFila}>
+                  <Text style={styles.accionTexto}>Registrar acta</Text>
+                  <ChevronRightIcon />
+                </View>
+              </Card>
             )}
             ListFooterComponent={<ListaPendientes />}
             contentContainerStyle={styles.lista}
@@ -72,7 +107,10 @@ export function RegistrarActaScreen() {
     <FormularioActa
       asignacion={asignacionSeleccionada}
       registradoPorId={usuario.id}
-      onVolver={() => setAsignacionSeleccionada(null)}
+      onVolver={() => {
+        setTransicion('atras');
+        setAsignacionSeleccionada(null);
+      }}
     />
   );
 }
@@ -88,9 +126,12 @@ function AlertaDemoraBanner({ alerta }: { alerta: ReturnType<typeof useAlertaDem
       : `Ya cerró la votación y todavía te faltan ${alerta.actasFaltantes} ${plural} por registrar. Hazlo cuanto antes.`;
 
   return (
-    <View style={[styles.alerta, alerta.nivel === 'critica' ? styles.alertaCritica : styles.alertaAdvertencia]}>
-      <Text style={styles.alertaTexto}>{mensaje}</Text>
-    </View>
+    <AlertBanner
+      nivel={alerta.nivel}
+      titulo={alerta.nivel === 'critica' ? 'Registro atrasado' : 'Te faltan actas'}
+      mensaje={mensaje}
+      pulso={alerta.nivel === 'critica'}
+    />
   );
 }
 
@@ -110,10 +151,10 @@ function ListaPendientes() {
     <View style={styles.pendientes}>
       <Text style={styles.subtitulo}>Actas pendientes de envío</Text>
       {actas.map((acta) => (
-        <View key={acta.id} style={styles.filaPendiente}>
+        <Animated.View key={acta.id} entering={entradaDeBloque} layout={transicionDeLayout} style={styles.filaPendiente}>
           <Text style={styles.cardDetalle}>{acta.dignidad === 'ALCALDIA' ? 'Alcaldía' : 'Prefectura'}</Text>
           <StatusBadge estado={acta.estado} />
-        </View>
+        </Animated.View>
       ))}
     </View>
   );
@@ -141,6 +182,8 @@ function FormularioActa({
   const [fotoUri, setFotoUri] = useState<string | null>(null);
   const [ubicacion, setUbicacion] = useState<Ubicacion | null>(null);
   const [nitidez, setNitidez] = useState<number | null>(null);
+  // Dirección del cambio entre "elegir dignidad" y el formulario de votos.
+  const [transicionInterna, setTransicionInterna] = useState<DireccionTransicion>();
 
   const organizacionesDignidad = useMemo(() => {
     if (!dignidad || !organizaciones.data?.ok) return [];
@@ -165,15 +208,19 @@ function FormularioActa({
     setFotoUri(null);
     setUbicacion(null);
     setNitidez(null);
+    setTransicionInterna('adelante');
     setDignidad(nueva);
   }
 
   async function capturarEvidencia() {
     const resultado = await capturarFoto.mutateAsync();
     if (resultado.ok) {
+      haptics.exito();
       setFotoUri(resultado.value.fotoUri);
       setUbicacion(resultado.value.ubicacion);
       setNitidez(resultado.value.nitidez);
+    } else {
+      haptics.error();
     }
   }
 
@@ -198,7 +245,14 @@ function FormularioActa({
       },
       {
         onSuccess: (resultado) => {
-          if (resultado.ok) onVolver();
+          if (resultado.ok) {
+            // RNF-05: se guarda en local primero; el envío se intenta ya y,
+            // si no hay señal, se reintenta solo — el badge muestra el estado.
+            toast.exito('Acta guardada en el teléfono. Revisa abajo su estado de envío.');
+            onVolver();
+          } else {
+            haptics.error();
+          }
         },
       }
     );
@@ -208,19 +262,23 @@ function FormularioActa({
   const errorRegistro = registrarActa.data && !registrarActa.data.ok ? registrarActa.data.error.message : null;
 
   return (
-    <Screen scrollable>
+    <Screen scrollable transicion="adelante">
       <Text style={styles.titulo}>{mesa.data?.ok ? `Mesa ${mesa.data.value.numeroJrv}` : 'Registrar acta'}</Text>
 
       {!dignidad ? (
-        <View style={styles.acciones}>
+        <Animated.View
+          key="elegir"
+          entering={transicionInterna ? entradaDeVista(transicionInterna) : undefined}
+          style={styles.acciones}
+        >
           <Text style={styles.subtitulo}>¿Qué acta vas a registrar?</Text>
           {DIGNIDADES.map((d) => (
             <Button key={d.valor} label={d.etiqueta} onPress={() => elegirDignidad(d.valor)} />
           ))}
           <Button label="Volver" variant="outline" onPress={onVolver} />
-        </View>
+        </Animated.View>
       ) : (
-        <>
+        <Animated.View key={dignidad} entering={transicionInterna ? entradaDeVista(transicionInterna) : undefined}>
           <Text style={styles.subtitulo}>Votos por organización — {dignidad === 'ALCALDIA' ? 'Alcaldía' : 'Prefectura'}</Text>
           {organizacionesDignidad.map(({ organizacion, candidato }) => (
             <TextField
@@ -242,13 +300,13 @@ function FormularioActa({
 
           <View style={styles.acciones}>
             {fotoUri ? (
-              <>
+              <Animated.View key={fotoUri} entering={ZoomIn.duration(260)}>
                 <Image source={{ uri: fotoUri }} style={styles.foto} />
                 {/* S-12: ayuda a calibrar UMBRAL_NITIDEZ_MINIMO con fotos reales — nunca en el build de entrega. */}
                 {__DEV__ && nitidez !== null ? (
                   <Text style={styles.nitidezDebug}>nitidez: {nitidez.toFixed(1)}</Text>
                 ) : null}
-              </>
+              </Animated.View>
             ) : (
               <Text style={styles.vacio}>Todavía no has tomado la foto del acta.</Text>
             )}
@@ -258,14 +316,29 @@ function FormularioActa({
               onPress={capturarEvidencia}
               loading={capturarFoto.isPending}
             />
-            {errorCaptura ? <Text style={styles.error}>{errorCaptura}</Text> : null}
+            {errorCaptura ? (
+              <Animated.Text entering={entradaDeBloque} style={styles.error}>
+                {errorCaptura}
+              </Animated.Text>
+            ) : null}
 
-            {errorRegistro ? <Text style={styles.error}>{errorRegistro}</Text> : null}
+            {errorRegistro ? (
+              <Animated.Text entering={entradaDeBloque} style={styles.error}>
+                {errorRegistro}
+              </Animated.Text>
+            ) : null}
 
             <Button label="Guardar acta" onPress={enviar} loading={registrarActa.isPending} />
-            <Button label="Cancelar" variant="outline" onPress={() => setDignidad(null)} />
+            <Button
+              label="Cancelar"
+              variant="outline"
+              onPress={() => {
+                setTransicionInterna('atras');
+                setDignidad(null);
+              }}
+            />
           </View>
-        </>
+        </Animated.View>
       )}
     </Screen>
   );
@@ -277,7 +350,9 @@ const styles = StyleSheet.create({
   flatList: { flex: 1 },
   lista: { gap: spacing.sm, paddingBottom: spacing.lg },
   vacio: { ...typography.body, color: colors.textSecondary, textAlign: 'center', marginVertical: spacing.sm },
-  card: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.md, gap: spacing.xs },
+  cardFila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  accionFila: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  accionTexto: { ...typography.bodyBold, color: colors.primary },
   cardTitulo: { ...typography.bodyBold, color: colors.textPrimary },
   cardDetalle: { ...typography.body, color: colors.textPrimary },
   acciones: { gap: spacing.sm, marginTop: spacing.sm },
@@ -286,8 +361,4 @@ const styles = StyleSheet.create({
   error: { ...typography.caption, color: colors.error, textAlign: 'center' },
   pendientes: { marginTop: spacing.lg, gap: spacing.xs },
   filaPendiente: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  alerta: { borderRadius: radius.sm, padding: spacing.md, marginBottom: spacing.md, borderWidth: 1 },
-  alertaAdvertencia: { backgroundColor: colors.warning + '26', borderColor: colors.warning },
-  alertaCritica: { backgroundColor: colors.error + '26', borderColor: colors.error },
-  alertaTexto: { ...typography.body, color: colors.textPrimary },
 });
