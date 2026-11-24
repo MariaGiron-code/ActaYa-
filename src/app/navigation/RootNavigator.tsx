@@ -11,6 +11,7 @@ import { CrearUsuarioScreen } from '@features/auth/presentation/screens/CrearUsu
 import { RecintosScreen } from '@features/territorio/presentation/screens/RecintosScreen';
 import { AsignacionesScreen } from '@features/personal/presentation/screens/AsignacionesScreen';
 import { RegistrarActaScreen } from '@features/actas/presentation/screens/RegistrarActaScreen';
+import { PanelSeguimientoScreen } from '@features/seguimiento/presentation/screens/PanelSeguimientoScreen';
 import { RootStackParamList } from './types';
 import { InicioScreen } from './InicioScreen';
 
@@ -81,6 +82,11 @@ export function RootNavigator() {
               name="RegistrarActa"
               component={RegistrarActaScreen}
               options={{ headerShown: true, title: 'Registrar acta' }}
+            />
+            <Stack.Screen
+              name="Seguimiento"
+              component={PanelSeguimientoScreen}
+              options={{ headerShown: true, title: 'Seguimiento' }}
             />
           </>
         )}

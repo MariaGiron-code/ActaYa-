@@ -10,9 +10,7 @@ import { useCerrarSesion } from '@features/auth/presentation/hooks/useAuth';
 import type { RootStackParamList } from './types';
 
 const PENDIENTES_POR_ROL: Record<RolUsuario, string[]> = {
-  [RolUsuario.COORDINADOR_PROVINCIAL]: [
-    'Panel de seguimiento en tiempo real (RF-16) — feature "seguimiento"',
-  ],
+  [RolUsuario.COORDINADOR_PROVINCIAL]: [],
   [RolUsuario.COORDINADOR_RECINTO]: ['Corregir actas de su recinto (RF-12) — feature "actas"'],
   [RolUsuario.VEEDOR]: [],
 };
@@ -39,7 +37,8 @@ export function InicioScreen() {
 
       {usuario.rol === RolUsuario.COORDINADOR_PROVINCIAL ? (
         <>
-          <Button label="Ver recintos" onPress={() => navigation.navigate('Recintos')} />
+          <Button label="Ver seguimiento" onPress={() => navigation.navigate('Seguimiento')} />
+          <Button label="Ver recintos" variant="outline" onPress={() => navigation.navigate('Recintos')} />
           <Button
             label="Crear coordinador de recinto"
             variant="outline"

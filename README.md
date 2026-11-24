@@ -56,7 +56,7 @@ src/
     territorio/    # COMPLETO — recintos/JRV/organizaciones precargados (ver su README.md: verifica los datos antes de defender)
     personal/      # COMPLETO — asignar/reemplazar veedores (ver su README.md)
     actas/         # COMPLETO (registro); falta la pantalla de corrección RF-12 (ver su README.md)
-    seguimiento/    # domain listo, falta data/presentation (ver su README.md)
+    seguimiento/    # COMPLETO — panel en tiempo real con Realtime y gráficos (ver su README.md)
 supabase/
   functions/        # Edge Functions (Deno): crear-usuario, verificar-cedula, verificar-correo
   migrations/        # SQL: tabla usuarios + RLS
@@ -139,12 +139,10 @@ npm run format       # Prettier
 
 ## Qué sigue
 
-Completa `actas` y `seguimiento` siguiendo el patrón de `features/auth`,
-`features/territorio`, `features/personal` y `features/actas`. Cada carpeta
-tiene su propio `README.md` con los RF/ADR que resuelve y los pasos
-sugeridos. Sigue con `seguimiento` (último feature) y con la pantalla de
-corrección de actas (RF-12) que quedó pendiente dentro de `actas`. Antes de
-la defensa, revisa dos advertencias importantes:
+Las 5 features base están completas. Lo único que queda es la pantalla de
+corrección de actas (RF-12), documentada en `features/actas/README.md` — el
+dominio y los datos ya están listos, falta la UI. Antes de la defensa,
+revisa dos advertencias importantes:
 `features/territorio/README.md` sobre los datos del seed (número de JRV y
 candidatos pendientes de verificación final) y
 `features/actas/README.md` sobre el umbral de nitidez de foto (debes

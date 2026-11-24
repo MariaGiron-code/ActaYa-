@@ -1,13 +1,45 @@
 # Feature: seguimiento
 
-**Estado:** domain listo, falta `data/` y `presentation/`.
+**Estado:** completo (domain + data + di + presentation).
 
 ## Qué resuelve
-- RF-16: el coordinador provincial ve mesas reportadas/pendientes por recinto y el avance de votos por candidato (alcaldía y prefectura), en tiempo real y sin esperar al CNE (funciona como un exit poll).
-- RNF-07: el panel se actualiza solo, sin que el coordinador recargue la pantalla.
+- RF-16: el coordinador provincial ve, por recinto, cuántas mesas han
+  reportado (ambas actas, alcaldía y prefectura, con foto y ubicación —
+  S-02) frente al total, y el conteo acumulado de votos por candidato para
+  cada dignidad — como un exit poll propio, sin esperar al CNE.
+- RNF-07: la pantalla se actualiza sola al llegar una acta nueva, vía
+  Supabase Realtime (ADR-10) — nunca por polling activo.
+- RF-17 / S-15: tal como decidió el equipo, no hay pantalla de estabilidad
+  aparte — el coordinador provincial revisa los fallos directamente en el
+  dashboard de Sentry.
 
-## Qué falta construir
-1. `data/datasources/SupabaseSeguimientoDatasource.ts`: consultas agregadas (puedes usar una vista SQL o RPC de Postgres que cuente mesas reportadas y sume votos) + un canal de **Supabase Realtime** (ADR-10) suscrito a la tabla `actas` que invalide las queries de TanStack Query cuando llega un INSERT/UPDATE.
-2. `presentation/screens/PanelSeguimientoScreen.tsx` con **react-native-gifted-charts** (ADR-07): barras por recinto para mesas reportadas/pendientes, y un gráfico por candidato para alcaldía y prefectura.
-3. Recuerda desuscribirte del canal realtime al desmontar la pantalla (consecuencia documentada en ADR-10: fugas de memoria si no lo haces).
-4. Este es también el lugar natural para un resumen de estabilidad (RF-17 / S-15): como el equipo decidió no crear un rol ni pantalla aparte para "equipo técnico", el coordinador provincial revisa los fallos directamente en el dashboard de Sentry (no hace falta construir una pantalla para esto dentro de la app).
+## Pieza que faltaba y se agregó
+`mesas.estado` se diseñó desde `0002_territorio.sql` para marcarse
+`'completa'` cuando llegan las dos actas de una mesa (S-02), pero nada lo
+actualizaba — al construir `actas` nunca se conectó esa pieza. Se agregó un
+**trigger** (`actualizar_estado_mesa`, en `0007_seguimiento.sql`) que lo
+recalcula automáticamente después de cada `INSERT` en `actas`, contando
+`count(distinct dignidad) = 2` para esa mesa. Así nunca puede
+desincronizarse, sin importar por dónde se inserte la fila.
+
+## Qué se construyó
+- `supabase/migrations/0007_seguimiento.sql`:
+  - El trigger de arriba.
+  - `resumen_por_recinto()` y `progreso_por_dignidad(p_dignidad)`: funciones
+    SQL agregadas (no vistas, por si luego hace falta paginar o filtrar).
+  - `alter publication supabase_realtime add table public.actas` — sin
+    esto, un cliente puede suscribirse pero nunca le llega ningún evento.
+- `data/datasources/SupabaseSeguimientoDatasource.ts`: llama a las dos
+  funciones SQL vía `.rpc()`, y abre/cierra el canal de Realtime.
+- `presentation/hooks/useSeguimiento.ts`: `useSuscripcionSeguimiento` se
+  desuscribe automáticamente al desmontar la pantalla (consecuencia
+  documentada en ADR-10: sin esto hay fuga de conexión).
+- `presentation/screens/PanelSeguimientoScreen.tsx`: `react-native-gifted-charts`
+  (ADR-07) — barras por recinto (reportadas/total) y por candidato,
+  alternando entre alcaldía y prefectura.
+- Registrado en `src/app/navigation/RootNavigator.tsx` (ruta `Seguimiento`,
+  botón "Ver seguimiento" en `InicioScreen` para el coordinador provincial).
+
+## Qué falta (fuera del alcance de este feature)
+- Pantalla de corrección de actas (RF-12) — sigue pendiente, documentada en
+  `features/actas/README.md`.
