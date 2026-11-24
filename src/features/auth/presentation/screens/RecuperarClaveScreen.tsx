@@ -1,14 +1,32 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { animaciones, Button, DireccionTransicion, FeedbackState, haptics, Screen, TextField } from '@core/ui';
+import {
+  animaciones,
+  Button,
+  ButtonGroup,
+  DireccionTransicion,
+  EncabezadoIlustrado,
+  entradaDeBloque,
+  haptics,
+  Screen,
+  TextField,
+} from '@core/ui';
 import { colors, spacing, typography } from '@core/theme';
 import { useRecuperarClave } from '../hooks/useAuth';
 
 const esquema = z.object({ correo: z.string().email('Correo no válido') });
 type FormValues = z.infer<typeof esquema>;
+
+/** "maria.giron@gmail.com" -> "m•••••••••@gmail.com": confirma el destino sin exponerlo entero. */
+function enmascararCorreo(correo: string) {
+  const [usuario, dominio] = correo.split('@');
+  if (!usuario || !dominio) return correo;
+  return `${usuario[0]}${'•'.repeat(Math.max(usuario.length - 1, 2))}@${dominio}`;
+}
 
 /** RF-05: nadie depende del coordinador para recuperar su acceso. */
 export function RecuperarClaveScreen({
@@ -23,7 +41,7 @@ export function RecuperarClaveScreen({
     defaultValues: { correo: '' },
   });
   const recuperarClave = useRecuperarClave();
-  const [enviado, setEnviado] = useState(false);
+  const [correoEnviado, setCorreoEnviado] = useState<string | null>(null);
 
   const onSubmit = handleSubmit(
     ({ correo }) =>
@@ -31,7 +49,7 @@ export function RecuperarClaveScreen({
         onSuccess: (r) => {
           if (r.ok) {
             haptics.exito();
-            setEnviado(true);
+            setCorreoEnviado(correo);
           } else {
             haptics.error();
           }
@@ -43,20 +61,28 @@ export function RecuperarClaveScreen({
   const errorDelServidor =
     recuperarClave.data && !recuperarClave.data.ok ? recuperarClave.data.error.message : null;
 
-  if (enviado) {
+  if (correoEnviado) {
     return (
       <Screen scrollable transicion="aparecer" fondoMarca>
-        <FeedbackState source={animaciones.exito} size={120} />
-        <Text style={styles.titulo}>Revisa tu correo</Text>
-        <Text style={styles.ayuda}>Te enviamos un enlace para crear una nueva clave.</Text>
-        <Button label="Volver al inicio" variant="outline" onPress={onVolver} />
+        <EncabezadoIlustrado
+          animacion={animaciones.correo}
+          titulo="Revisa tu correo"
+          descripcion={`Enviamos un enlace a ${enmascararCorreo(correoEnviado)} para que crees una clave nueva. Si no lo ves en unos minutos, revisa la carpeta de spam.`}
+        />
+        <ButtonGroup>
+          <Button label="Volver al inicio" variant="outline" onPress={onVolver} />
+        </ButtonGroup>
       </Screen>
     );
   }
 
   return (
     <Screen scrollable transicion={transicion} fondoMarca>
-      <Text style={styles.titulo}>Recuperar acceso</Text>
+      <EncabezadoIlustrado
+        animacion={animaciones.llave}
+        titulo="Recuperar acceso"
+        descripcion="Escribe el correo de tu cuenta y te enviaremos un enlace para crear una clave nueva."
+      />
       <Controller
         control={control}
         name="correo"
@@ -68,19 +94,24 @@ export function RecuperarClaveScreen({
             errorMessage={formState.errors.correo?.message}
             autoCapitalize="none"
             keyboardType="email-address"
+            autoComplete="email"
           />
         )}
       />
-      {errorDelServidor ? <Text style={styles.errorServidor}>{errorDelServidor}</Text> : null}
+      {errorDelServidor ? (
+        <Animated.Text entering={entradaDeBloque} style={styles.errorServidor}>
+          {errorDelServidor}
+        </Animated.Text>
+      ) : null}
 
-      <Button label="Enviar enlace de recuperación" onPress={onSubmit} loading={recuperarClave.isPending} />
-      <Button label="Volver" variant="outline" onPress={onVolver} />
+      <ButtonGroup>
+        <Button label="Enviar enlace de recuperación" onPress={onSubmit} loading={recuperarClave.isPending} />
+        <Button label="Volver" variant="outline" onPress={onVolver} />
+      </ButtonGroup>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  titulo: { ...typography.h2, marginTop: spacing.lg, marginBottom: spacing.md },
-  ayuda: { ...typography.body, marginBottom: spacing.lg },
   errorServidor: { ...typography.body, color: colors.error, textAlign: 'center', marginBottom: spacing.sm },
 });

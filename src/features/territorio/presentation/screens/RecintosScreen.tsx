@@ -17,6 +17,7 @@ import {
   toast,
   EmptyState,
   RecintoIcon,
+  ButtonGroup,
 } from '@core/ui';
 import { colors, spacing, typography } from '@core/theme';
 import { useSessionStore, selectRol } from '@features/auth/presentation/store/useSessionStore';
@@ -169,8 +170,10 @@ function FormularioAgregarRecinto({ onCerrar }: { onCerrar: () => void }) {
 
       {errorDelServidor ? <Text style={styles.errorServidor}>{errorDelServidor}</Text> : null}
 
-      <Button label="Guardar" onPress={onSubmit} loading={agregarRecinto.isPending} />
-      <Button label="Cancelar" variant="outline" onPress={onCerrar} />
+      <ButtonGroup>
+        <Button label="Guardar" onPress={onSubmit} loading={agregarRecinto.isPending} />
+        <Button label="Cancelar" variant="outline" onPress={onCerrar} />
+      </ButtonGroup>
     </Animated.View>
   );
 }

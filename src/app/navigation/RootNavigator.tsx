@@ -38,8 +38,20 @@ const opcionesDePantalla: NativeStackNavigationOptions = {
 const OPCIONES_CAMBIO_DE_SESION: NativeStackNavigationOptions = { animation: 'fade' };
 
 /** Adapta `CrearUsuarioScreen` (recibe props directas) a la ruta (recibe params). */
-function CrearUsuarioRoute({ route }: { route: RouteProp<RootStackParamList, 'CrearUsuario'> }) {
-  return <CrearUsuarioScreen rolDeQuienCrea={route.params.rolDeQuienCrea} rolACrear={route.params.rolACrear} />;
+function CrearUsuarioRoute({
+  route,
+  navigation,
+}: {
+  route: RouteProp<RootStackParamList, 'CrearUsuario'>;
+  navigation: { goBack: () => void };
+}) {
+  return (
+    <CrearUsuarioScreen
+      rolDeQuienCrea={route.params.rolDeQuienCrea}
+      rolACrear={route.params.rolACrear}
+      onVolver={() => navigation.goBack()}
+    />
+  );
 }
 
 function AuthFlow() {

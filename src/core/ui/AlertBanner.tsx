@@ -21,6 +21,8 @@ type AlertBannerProps = PropsWithChildren<{
   mensaje?: string;
   /** Latido continuo del ícono y el borde, para urgencias que no pueden pasar desapercibidas. */
   pulso?: boolean;
+  /** Vibrar al aparecer. Apágalo si la pantalla ya vibró por la misma acción. */
+  vibrar?: boolean;
 }>;
 
 const ESTILO: Record<NivelAlerta, { color: string; fondo: string }> = {
@@ -32,14 +34,15 @@ const ESTILO: Record<NivelAlerta, { color: string; fondo: string }> = {
  * Aviso destacado dentro de la pantalla (no modal). Entra deslizando, vibra
  * al aparecer o al subir de nivel, y opcionalmente late mientras siga visible.
  */
-export function AlertBanner({ nivel, titulo, mensaje, pulso = false, children }: AlertBannerProps) {
+export function AlertBanner({ nivel, titulo, mensaje, pulso = false, vibrar = true, children }: AlertBannerProps) {
   const { color, fondo } = ESTILO[nivel];
   const latido = useSharedValue(0);
 
   useEffect(() => {
+    if (!vibrar) return;
     if (nivel === 'critica') haptics.error();
     else haptics.advertencia();
-  }, [nivel]);
+  }, [nivel, vibrar]);
 
   useEffect(() => {
     if (!pulso) {

@@ -58,6 +58,8 @@ const trazo = (puntos, cerrado = false) => ({
   nm: 'Trazo',
   ks: estatico({ i: puntos.map(() => [0, 0]), o: puntos.map(() => [0, 0]), v: puntos, c: cerrado }),
 });
+// Trazo con curvas: i/o son las tangentes de entrada/salida de cada vértice (relativas).
+const trazoCurvo = (v, i, o, cerrado = false) => ({ ty: 'sh', d: 1, nm: 'Curva', ks: estatico({ i, o, v, c: cerrado }) });
 const relleno = (c, o = 100) => ({ ty: 'fl', c: estatico(c), o: estatico(o), r: 1, nm: 'Relleno' });
 const borde = (c, w, o = 100) => ({
   ty: 'st',
@@ -238,10 +240,153 @@ function error() {
   return animacion('error', OP, [insignia]);
 }
 
+// ---------- Piezas compartidas de las ilustraciones de clave y personas ----------
+const K = 0.5523; // constante para aproximar un arco circular con bézier
+const fondoCircular = (op) =>
+  capa('fondo', [grupo('fondo', [elipse(150), relleno(C.azul, 8)])], {}, op);
+
+// Arco del candado: patas de 16 px y semicírculo de radio 22.
+const arcoCandado = () =>
+  trazoCurvo(
+    [[-22, 0], [-22, -16], [0, -38], [22, -16], [22, 0]],
+    [[0, 0], [0, 0], [-22 * K, 0], [0, -22 * K], [0, 0]],
+    [[0, 0], [0, -22 * K], [22 * K, 0], [0, 0], [0, 0]]
+  );
+
+const cuerpoCandado = (op) =>
+  capa(
+    'cuerpo',
+    [
+      grupo('cerradura', [elipse(18), relleno(C.amarillo)], { p: estatico([0, -6]) }),
+      grupo('ranura', [rect(7, 18, 3.5, [0, 8]), relleno(C.amarillo)]),
+      grupo('cuerpo', [rect(76, 60, 12), relleno(C.azul)]),
+    ],
+    { p: estatico([100, 112, 0]) },
+    op
+  );
+
+const sello = (nombre, x, y, inicio, colorFondo, items) =>
+  capa(
+    nombre,
+    [...items, grupo('circulo', [elipse(40), borde(C.blanco, 5), relleno(colorFondo)])],
+    {
+      p: estatico([x, y, 0]),
+      s: animado([
+        [0, [0, 0, 100]],
+        [inicio, [0, 0, 100], OUT_BACK],
+        [inicio + 10, [115, 115, 100]],
+        [inicio + 16, [100, 100, 100]],
+      ]),
+    },
+    inicio + 30
+  );
+const checkBlanco = () => grupo('check', [trazo([[-9, 0], [-3, 6], [9, -6]]), borde(C.blanco, 5)]);
+
+// ---------- Recuperar acceso: la llave entra, gira y abre el candado ----------
+function llave() {
+  indice = 1;
+  const OP = 70;
+  const llaveCapa = capa(
+    'llave',
+    [
+      grupo('llave', [
+        trazo([[13, 0], [-18, 0]]),
+        trazo([[-10, 0], [-10, 9]]),
+        borde(C.amarillo, 7),
+      ]),
+      grupo('ojo', [elipse(24), borde(C.amarillo, 7)], { p: estatico([25, 0]) }),
+    ],
+    {
+      p: animado([[0, [196, 112, 0]], [18, [156, 112, 0]]]),
+      o: animado([[0, 0], [10, 100]]),
+      r: animado([[22, 0], [34, 90]]),
+    },
+    OP
+  );
+  const arco = capa(
+    'arco',
+    [grupo('arco', [arcoCandado(), borde(C.azul, 10)])],
+    { p: animado([[34, [100, 88, 0]], [44, [100, 74, 0], OUT_BACK], [50, [100, 76, 0]]]) },
+    OP
+  );
+  return animacion('llave', OP, [llaveCapa, cuerpoCandado(OP), arco, fondoCircular(OP)]);
+}
+
+// ---------- Crear clave: el candado se cierra y aparece el check ----------
+function candado() {
+  indice = 1;
+  const OP = 50;
+  const arco = capa(
+    'arco',
+    [grupo('arco', [arcoCandado(), borde(C.azul, 10)])],
+    { p: animado([[0, [100, 72, 0]], [6, [100, 72, 0]], [18, [100, 88, 0]]]) },
+    OP
+  );
+  const check = sello('check', 136, 140, 20, C.verde, [checkBlanco()]);
+  check.op = OP;
+  return animacion('candado', OP, [check, cuerpoCandado(OP), arco, fondoCircular(OP)]);
+}
+
+// ---------- Registrar persona: avatar que aparece y "+" amarillo con rebote ----------
+function persona() {
+  indice = 1;
+  const OP = 45;
+  const avatar = capa(
+    'avatar',
+    [
+      grupo('cabeza', [elipse(36), borde(C.azul, 7)], { p: estatico([0, -22]) }),
+      grupo('hombros', [
+        trazoCurvo(
+          [[-32, 26], [0, 6], [32, 26]],
+          [[0, 0], [-16, 0], [-4, -16]],
+          [[4, -16], [16, 0], [0, 0]]
+        ),
+        borde(C.azul, 7),
+      ]),
+    ],
+    {
+      p: estatico([94, 100, 0]),
+      o: animado([[0, 0], [10, 100]]),
+      s: animado([[0, [85, 85, 100]], [12, [100, 100, 100]]]),
+    },
+    OP
+  );
+  const mas = sello('mas', 134, 134, 12, C.amarillo, [
+    grupo('mas', [trazo([[0, -8], [0, 8]]), trazo([[-8, 0], [8, 0]]), borde(C.azul, 5)]),
+  ]);
+  mas.op = OP;
+  return animacion('persona', OP, [mas, avatar, fondoCircular(OP)]);
+}
+
+// ---------- Revisa tu correo: el sobre sube y se sella con un check ----------
+function correo() {
+  indice = 1;
+  const OP = 50;
+  const sobre = capa(
+    'sobre',
+    [
+      grupo('solapa', [trazo([[-46, -30], [0, 6], [46, -30]]), borde(C.azul, 6)]),
+      grupo('sobre', [rect(96, 66, 8), borde(C.azul, 6), relleno(C.blanco)]),
+    ],
+    {
+      p: animado([[0, [100, 130, 0], OUT_BACK], [14, [100, 100, 0]]]),
+      o: animado([[0, 0], [8, 100]]),
+    },
+    OP
+  );
+  const check = sello('check', 140, 128, 16, C.verde, [checkBlanco()]);
+  check.op = OP;
+  return animacion('correo', OP, [check, sobre, fondoCircular(OP)]);
+}
+
 for (const [nombre, datos] of [
   ['cargando', cargando()],
   ['exito', exito()],
   ['error', error()],
+  ['llave', llave()],
+  ['candado', candado()],
+  ['persona', persona()],
+  ['correo', correo()],
 ]) {
   fs.writeFileSync(path.join(destino, `${nombre}.json`), JSON.stringify(datos));
   console.log(`${nombre}.json: ${datos.layers.length} capas, ${datos.op} frames`);

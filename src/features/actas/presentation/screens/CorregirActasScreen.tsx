@@ -18,6 +18,7 @@ import {
   toast,
   ActaIcon,
   EmptyState,
+  ButtonGroup,
 } from '@core/ui';
 import { colors, radius, spacing, typography } from '@core/theme';
 import { useMesa, useOrganizacionesConCandidatos } from '@features/territorio/presentation/hooks/useTerritorio';
@@ -256,8 +257,10 @@ function FormularioCorreccion({ acta, onVolver }: { acta: Acta; onVolver: () => 
         </AlertBanner>
       ) : null}
 
-      <Button label="Guardar corrección" onPress={guardar} loading={corregirActa.isPending} />
-      <Button label="Cancelar" variant="outline" onPress={onVolver} />
+      <ButtonGroup>
+        <Button label="Guardar corrección" onPress={guardar} loading={corregirActa.isPending} />
+        <Button label="Cancelar" variant="outline" onPress={onVolver} />
+      </ButtonGroup>
     </Screen>
   );
 }

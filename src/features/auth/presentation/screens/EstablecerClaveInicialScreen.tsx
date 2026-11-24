@@ -1,15 +1,28 @@
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
-import { Controller, useForm } from 'react-hook-form';
+import { StyleSheet } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button, haptics, Screen, TextField, toast } from '@core/ui';
+import {
+  animaciones,
+  Button,
+  ButtonGroup,
+  EncabezadoIlustrado,
+  entradaDeBloque,
+  haptics,
+  Screen,
+  TextField,
+  toast,
+} from '@core/ui';
 import { colors, spacing, typography } from '@core/theme';
 import { useCerrarSesion, useEstablecerClaveInicial } from '../hooks/useAuth';
+import { useSessionStore } from '../store/useSessionStore';
+import { LARGO_MINIMO_CLAVE, RequisitosClave } from '../components/RequisitosClave';
 
 const esquema = z
   .object({
-    nuevaClave: z.string().min(8, 'Usa al menos 8 caracteres'),
+    nuevaClave: z.string().min(LARGO_MINIMO_CLAVE, `Usa al menos ${LARGO_MINIMO_CLAVE} caracteres`),
     confirmacion: z.string(),
   })
   .refine((datos) => datos.nuevaClave === datos.confirmacion, {
@@ -22,6 +35,7 @@ type FormValues = z.infer<typeof esquema>;
 /**
  * RF-02 / S-11: se muestra una sola vez, en el primer ingreso con la clave
  * temporal. Al terminar, quien la creó deja de tener forma de conocerla.
+ * También se usa al volver del enlace de "olvidé mi clave" (RF-05/S-08).
  */
 export function EstablecerClaveInicialScreen() {
   const { control, handleSubmit, formState } = useForm<FormValues>({
@@ -30,11 +44,14 @@ export function EstablecerClaveInicialScreen() {
   });
   const establecerClave = useEstablecerClaveInicial();
   const cerrarSesion = useCerrarSesion();
+  const enRecuperacion = useSessionStore((s) => s.enRecuperacion);
+  const nuevaClave = useWatch({ control, name: 'nuevaClave' });
+  const confirmacion = useWatch({ control, name: 'confirmacion' });
 
   const onSubmit = handleSubmit(
-    ({ nuevaClave, confirmacion }) =>
+    ({ nuevaClave: clave, confirmacion: confirmada }) =>
       establecerClave.mutate(
-        { nuevaClave, confirmacion },
+        { nuevaClave: clave, confirmacion: confirmada },
         { onSuccess: (r) => (r.ok ? toast.exito('Tu clave personal quedó guardada') : haptics.error()) }
       ),
     () => haptics.error()
@@ -45,10 +62,15 @@ export function EstablecerClaveInicialScreen() {
 
   return (
     <Screen scrollable fondoMarca>
-      <Text style={styles.titulo}>Crea tu clave personal</Text>
-      <Text style={styles.ayuda}>
-        A partir de ahora, nadie más que tú conocerá esta clave.
-      </Text>
+      <EncabezadoIlustrado
+        animacion={animaciones.candado}
+        titulo={enRecuperacion ? 'Crea una clave nueva' : 'Crea tu clave personal'}
+        descripcion={
+          enRecuperacion
+            ? 'Elige una clave nueva para tu cuenta. La anterior dejará de funcionar.'
+            : 'A partir de ahora, nadie más que tú conocerá esta clave.'
+        }
+      />
 
       <Controller
         control={control}
@@ -60,6 +82,7 @@ export function EstablecerClaveInicialScreen() {
             onChangeText={field.onChange}
             errorMessage={formState.errors.nuevaClave?.message}
             secureTextEntry
+            autoComplete="new-password"
           />
         )}
       />
@@ -73,25 +96,32 @@ export function EstablecerClaveInicialScreen() {
             onChangeText={field.onChange}
             errorMessage={formState.errors.confirmacion?.message}
             secureTextEntry
+            autoComplete="new-password"
           />
         )}
       />
 
-      {errorDelServidor ? <Text style={styles.errorServidor}>{errorDelServidor}</Text> : null}
+      <RequisitosClave clave={nuevaClave} confirmacion={confirmacion} />
 
-      <Button label="Guardar clave" onPress={onSubmit} loading={establecerClave.isPending} />
-      <Button
-        label="Cancelar e iniciar sesión más tarde"
-        variant="outline"
-        onPress={() => cerrarSesion.mutate()}
-        loading={cerrarSesion.isPending}
-      />
+      {errorDelServidor ? (
+        <Animated.Text entering={entradaDeBloque} style={styles.errorServidor}>
+          {errorDelServidor}
+        </Animated.Text>
+      ) : null}
+
+      <ButtonGroup>
+        <Button label="Guardar clave" onPress={onSubmit} loading={establecerClave.isPending} />
+        <Button
+          label="Cancelar e iniciar sesión más tarde"
+          variant="outline"
+          onPress={() => cerrarSesion.mutate()}
+          loading={cerrarSesion.isPending}
+        />
+      </ButtonGroup>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  titulo: { ...typography.h2, marginTop: spacing.lg },
-  ayuda: { ...typography.body, marginBottom: spacing.lg },
   errorServidor: { ...typography.body, color: colors.error, textAlign: 'center', marginBottom: spacing.sm },
 });

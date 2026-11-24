@@ -19,6 +19,8 @@ type CardProps = PropsWithChildren<{
   destacada?: boolean;
   /** Menos relleno, para opciones dentro de otra tarjeta. */
   compacta?: boolean;
+  /** Opción elegida dentro de una lista de selección. */
+  seleccionada?: boolean;
 }>;
 
 const RESORTE = { damping: 15, stiffness: 400, mass: 0.6 };
@@ -32,6 +34,7 @@ export function Card({
   icono,
   destacada = false,
   compacta = false,
+  seleccionada = false,
   children,
 }: CardProps) {
   const escala = useSharedValue(1);
@@ -45,6 +48,7 @@ export function Card({
         styles.card,
         compacta ? styles.compacta : styles.normal,
         destacada && styles.destacada,
+        seleccionada && styles.seleccionada,
         estiloAnimado,
       ]}
     >
@@ -61,6 +65,7 @@ export function Card({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ selected: seleccionada }}
       onPress={() => {
         haptics.tap();
         onPress();
@@ -92,6 +97,7 @@ const styles = StyleSheet.create({
   normal: { padding: spacing.md },
   compacta: { padding: spacing.sm, elevation: 0, shadowOpacity: 0 },
   destacada: { backgroundColor: colors.primary, borderColor: colors.primary },
+  seleccionada: { borderColor: colors.primary, borderWidth: 2, backgroundColor: colors.primary + '0D' },
   icono: {
     width: 44,
     height: 44,

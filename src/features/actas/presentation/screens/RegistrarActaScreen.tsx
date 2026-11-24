@@ -20,6 +20,7 @@ import {
   transicionDeLayout,
   EmptyState,
   UrnaIcon,
+  ESPACIO_ENTRE_BOTONES,
 } from '@core/ui';
 import { colors, radius, spacing, typography } from '@core/theme';
 import { useSessionStore } from '@features/auth/presentation/store/useSessionStore';
@@ -355,7 +356,7 @@ const styles = StyleSheet.create({
   accionTexto: { ...typography.bodyBold, color: colors.primary },
   cardTitulo: { ...typography.bodyBold, color: colors.textPrimary },
   cardDetalle: { ...typography.body, color: colors.textPrimary },
-  acciones: { gap: spacing.sm, marginTop: spacing.sm },
+  acciones: { gap: ESPACIO_ENTRE_BOTONES, marginTop: spacing.sm },
   foto: { width: '100%', height: 220, borderRadius: radius.sm, marginBottom: spacing.xs },
   nitidezDebug: { ...typography.caption, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xs },
   error: { ...typography.caption, color: colors.error, textAlign: 'center' },

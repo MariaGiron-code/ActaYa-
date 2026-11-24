@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ActinMascot, AppIcon, Button, DireccionTransicion, haptics, Screen, TextField, toast } from '@core/ui';
+import { ActinMascot, AppIcon, Button, ButtonGroup, DireccionTransicion, haptics, Screen, TextField, toast } from '@core/ui';
 import { colors, spacing, typography } from '@core/theme';
 import { useIniciarSesion } from '../hooks/useAuth';
 
@@ -86,8 +86,10 @@ export function LoginScreen({
 
         {errorDelServidor ? <Text style={styles.errorServidor}>{errorDelServidor}</Text> : null}
 
-        <Button label="Ingresar" onPress={onSubmit} loading={iniciarSesion.isPending} />
-        <Button label="Olvidé mi clave" variant="outline" onPress={onIrARecuperar} />
+        <ButtonGroup>
+          <Button label="Ingresar" onPress={onSubmit} loading={iniciarSesion.isPending} />
+          <Button label="Olvidé mi clave" variant="outline" onPress={onIrARecuperar} />
+        </ButtonGroup>
       </View>
     </Screen>
   );

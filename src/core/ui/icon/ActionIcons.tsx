@@ -75,6 +75,25 @@ export function UrnaIcon({ size = 22, color = colors.primary }: ActionIconProps)
   );
 }
 
+export function IdentidadIcon({ size = 18, color = colors.primary }: ActionIconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Rect x={3} y={5} width={18} height={14} rx={2} {...trazo(color)} />
+      <Circle cx={9} cy={11} r={2} {...trazo(color)} />
+      <Path d="M6 16C6.5 14.8 7.6 14 9 14C10.4 14 11.5 14.8 12 16M15 10H18M15 13H17" {...trazo(color)} />
+    </Svg>
+  );
+}
+
+export function CorreoIcon({ size = 18, color = colors.primary }: ActionIconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Rect x={3} y={5} width={18} height={14} rx={2} {...trazo(color)} />
+      <Path d="M4 7L12 13L20 7" {...trazo(color)} />
+    </Svg>
+  );
+}
+
 export function SalirIcon({ size = 20, color = colors.textSecondary }: ActionIconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24">

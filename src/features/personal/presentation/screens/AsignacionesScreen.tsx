@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
-import { Controller, useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import Animated from 'react-native-reanimated';
 import {
   animaciones,
@@ -13,29 +12,28 @@ import {
   FeedbackState,
   haptics,
   Screen,
-  TextField,
   toast,
   EmptyState,
+  ESPACIO_ENTRE_BOTONES,
+  AgregarPersonaIcon,
+  ButtonGroup,
 } from '@core/ui';
 import { colors, spacing, typography } from '@core/theme';
-import { esFormatoCedulaValido } from '@core/validation/cedula';
 import { useSessionStore } from '@features/auth/presentation/store/useSessionStore';
 import { useSubordinados } from '@features/auth/presentation/hooks/useAuth';
 import { RolUsuario, Usuario } from '@features/auth/domain/entities/Usuario';
+import {
+  CamposPersona,
+  DatosPersona,
+  esquemaDatosPersona,
+  VALORES_INICIALES_PERSONA,
+} from '@features/auth/presentation/components/CamposPersona';
+import { ClaveTemporalEntregada } from '@features/auth/presentation/components/ClaveTemporalEntregada';
 import { useMesasDeRecinto } from '@features/territorio/presentation/hooks/useTerritorio';
 import { Mesa } from '@features/territorio/domain/entities/Territorio';
 import { useAsignacionesDeRecinto, useAsignarVeedor, useReemplazarVeedor } from '../hooks/usePersonal';
 import { AsignacionVeedor } from '../../domain/entities/AsignacionVeedor';
 
-const esquemaNuevo = z.object({
-  cedula: z.string().refine(esFormatoCedulaValido, 'Cédula no válida'),
-  nombres: z.string().min(2, 'Ingresa los nombres completos'),
-  apellidos: z.string().min(2, 'Ingresa los apellidos completos'),
-  telefono: z.string().min(7, 'Ingresa un teléfono válido'),
-  correo: z.string().email('Correo no válido'),
-});
-
-type FormNuevo = z.infer<typeof esquemaNuevo>;
 
 /**
  * RF-07/RF-08/S-03: el coordinador de recinto asigna un veedor a cada mesa
@@ -183,6 +181,7 @@ function MesaRow({
       ) : (
         <Animated.View key="nuevo" entering={entradaDeBloque}>
           <FormularioVeedorNuevo
+            numeroMesa={mesa.numeroJrv}
             asignacionActualId={asignacionActiva!.id}
             reemplazarVeedor={reemplazarVeedor}
             onCancelar={() => setModoEdicion('ninguno')}
@@ -205,22 +204,29 @@ function MesaRow({
   );
 }
 
+/**
+ * S-03: reemplazar al veedor con una persona nueva. Usa los mismos campos,
+ * validaciones y pantalla de éxito que "Crear veedor" (CrearUsuarioScreen),
+ * para que crear un usuario se vea igual en toda la app.
+ */
 function FormularioVeedorNuevo({
+  numeroMesa,
   asignacionActualId,
   reemplazarVeedor,
   onCancelar,
   onExito,
 }: {
+  numeroMesa: string;
   asignacionActualId: string;
   reemplazarVeedor: ReturnType<typeof useReemplazarVeedor>;
   onCancelar: () => void;
   onExito: () => void;
 }) {
-  const { control, handleSubmit, formState } = useForm<FormNuevo>({
-    resolver: zodResolver(esquemaNuevo),
-    defaultValues: { cedula: '', nombres: '', apellidos: '', telefono: '', correo: '' },
+  const { control, handleSubmit, formState } = useForm<DatosPersona>({
+    resolver: zodResolver(esquemaDatosPersona),
+    defaultValues: VALORES_INICIALES_PERSONA,
   });
-  const [claveTemporal, setClaveTemporal] = useState<string | null>(null);
+  const [reemplazo, setReemplazo] = useState<{ nombre: string; claveTemporal: string } | null>(null);
 
   const onSubmit = handleSubmit(
     (datos) =>
@@ -236,7 +242,7 @@ function FormularioVeedorNuevo({
             // se cierra el formulario igual que antes en vez de dejarlo colgado.
             if (r.value.claveTemporal) {
               haptics.exito();
-              setClaveTemporal(r.value.claveTemporal);
+              setReemplazo({ nombre: `${datos.nombres} ${datos.apellidos}`, claveTemporal: r.value.claveTemporal });
             } else {
               toast.exito('Veedor reemplazado');
               onExito();
@@ -247,87 +253,54 @@ function FormularioVeedorNuevo({
     () => haptics.error()
   );
 
-  if (claveTemporal) {
+  if (reemplazo) {
     return (
-      <View style={styles.acciones}>
-        <Text style={styles.cardDetalle}>
-          Entrega esta clave temporal a la persona para que pueda ingresar y reemplazar al veedor anterior. Solo se
-          mostrará esta vez (S-11):
-        </Text>
-        <Text style={styles.claveTemporal}>{claveTemporal}</Text>
-        <Button label="Listo" onPress={onExito} />
-      </View>
+      <ClaveTemporalEntregada
+        compacto
+        titulo="Veedor reemplazado"
+        descripcion={`${reemplazo.nombre} es ahora el veedor de la mesa ${numeroMesa}.`}
+        claveTemporal={reemplazo.claveTemporal}
+      >
+        <ButtonGroup>
+          <Button label="Listo" onPress={onExito} />
+        </ButtonGroup>
+      </ClaveTemporalEntregada>
     );
   }
 
   return (
-    <View style={styles.acciones}>
-      <Controller
+    <View style={styles.formularioNuevo}>
+      <View style={styles.encabezadoNuevo}>
+        <View style={styles.iconoNuevo}>
+          <AgregarPersonaIcon />
+        </View>
+        <View style={styles.textosNuevo}>
+          <Text style={styles.tituloNuevo}>Persona nueva</Text>
+          <Text style={styles.cardDetalle}>Verificaremos que la cédula y el correo existan.</Text>
+        </View>
+      </View>
+
+      <CamposPersona
         control={control}
-        name="cedula"
-        render={({ field }) => (
-          <TextField
-            label="Cédula"
-            value={field.value}
-            onChangeText={field.onChange}
-            errorMessage={formState.errors.cedula?.message}
-            keyboardType="number-pad"
-            maxLength={10}
-          />
-        )}
+        errores={{
+          cedula: formState.errors.cedula?.message,
+          nombres: formState.errors.nombres?.message,
+          apellidos: formState.errors.apellidos?.message,
+          telefono: formState.errors.telefono?.message,
+          correo: formState.errors.correo?.message,
+        }}
       />
-      <Controller
-        control={control}
-        name="nombres"
-        render={({ field }) => (
-          <TextField label="Nombres" value={field.value} onChangeText={field.onChange} errorMessage={formState.errors.nombres?.message} />
-        )}
-      />
-      <Controller
-        control={control}
-        name="apellidos"
-        render={({ field }) => (
-          <TextField
-            label="Apellidos"
-            value={field.value}
-            onChangeText={field.onChange}
-            errorMessage={formState.errors.apellidos?.message}
-          />
-        )}
-      />
-      <Controller
-        control={control}
-        name="telefono"
-        render={({ field }) => (
-          <TextField
-            label="Teléfono"
-            value={field.value}
-            onChangeText={field.onChange}
-            errorMessage={formState.errors.telefono?.message}
-            keyboardType="phone-pad"
-          />
-        )}
-      />
-      <Controller
-        control={control}
-        name="correo"
-        render={({ field }) => (
-          <TextField
-            label="Correo electrónico"
-            value={field.value}
-            onChangeText={field.onChange}
-            errorMessage={formState.errors.correo?.message}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-        )}
-      />
+
       {reemplazarVeedor.data && !reemplazarVeedor.data.ok ? (
-        <Text style={styles.error}>{reemplazarVeedor.data.error.message}</Text>
+        <Animated.Text entering={entradaDeBloque} style={styles.error}>
+          {reemplazarVeedor.data.error.message}
+        </Animated.Text>
       ) : null}
 
-      <Button label="Crear y reemplazar" onPress={onSubmit} loading={reemplazarVeedor.isPending} />
-      <Button label="Cancelar" variant="outline" onPress={onCancelar} />
+      <ButtonGroup>
+        <Button label="Crear y reemplazar" onPress={onSubmit} loading={reemplazarVeedor.isPending} />
+        <Button label="Cancelar" variant="outline" onPress={onCancelar} />
+      </ButtonGroup>
     </View>
   );
 }
@@ -339,8 +312,19 @@ const styles = StyleSheet.create({
   vacio: { ...typography.body, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.md },
   cardTitulo: { ...typography.bodyBold, color: colors.textPrimary },
   cardDetalle: { ...typography.caption, color: colors.textSecondary },
-  acciones: { gap: spacing.xs, marginTop: spacing.sm },
+  acciones: { gap: ESPACIO_ENTRE_BOTONES, marginTop: spacing.sm },
   opcionTexto: { ...typography.body, color: colors.textPrimary },
   error: { ...typography.caption, color: colors.error, marginTop: spacing.xs },
-  claveTemporal: { ...typography.h2, color: colors.primary, textAlign: 'center', marginVertical: spacing.sm },
+  formularioNuevo: { marginTop: spacing.sm },
+  encabezadoNuevo: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md },
+  iconoNuevo: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.accent + '33',
+  },
+  textosNuevo: { flex: 1 },
+  tituloNuevo: { ...typography.bodyBold, color: colors.primary },
 });
