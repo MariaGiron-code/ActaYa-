@@ -45,6 +45,14 @@ export class SupabaseTerritorioDatasource {
     return ok((data as MesaRow[]).map(mesaFromRow));
   }
 
+  async obtenerMesa(mesaId: string): Promise<Result<Mesa>> {
+    const { data, error } = await this.client.from('mesas').select('*').eq('id', mesaId).single<MesaRow>();
+    if (error || !data) {
+      return fail({ code: 'ERROR_OBTENER_MESA', message: error?.message ?? 'No se encontró la mesa.', cause: error });
+    }
+    return ok(mesaFromRow(data));
+  }
+
   async listarOrganizacionesConCandidatos(): Promise<
     Result<{ organizacion: OrganizacionPolitica; candidatos: Candidato[] }[]>
   > {

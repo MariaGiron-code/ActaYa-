@@ -10,6 +10,7 @@ import { EstablecerClaveInicialScreen } from '@features/auth/presentation/screen
 import { CrearUsuarioScreen } from '@features/auth/presentation/screens/CrearUsuarioScreen';
 import { RecintosScreen } from '@features/territorio/presentation/screens/RecintosScreen';
 import { AsignacionesScreen } from '@features/personal/presentation/screens/AsignacionesScreen';
+import { RegistrarActaScreen } from '@features/actas/presentation/screens/RegistrarActaScreen';
 import { RootStackParamList } from './types';
 import { InicioScreen } from './InicioScreen';
 
@@ -75,6 +76,11 @@ export function RootNavigator() {
               name="CrearUsuario"
               component={CrearUsuarioRoute}
               options={{ headerShown: true, title: 'Registrar persona' }}
+            />
+            <Stack.Screen
+              name="RegistrarActa"
+              component={RegistrarActaScreen}
+              options={{ headerShown: true, title: 'Registrar acta' }}
             />
           </>
         )}

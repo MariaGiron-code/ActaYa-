@@ -7,4 +7,6 @@ export interface PersonalRepository {
   /** RF-08: reemplazo el mismo día, incluso por una persona externa habilitada por el coordinador (S-03). */
   reemplazarVeedor(asignacionActualId: string, nuevoVeedorId: string): Promise<Result<AsignacionVeedor>>;
   listarAsignacionesDeRecinto(recintoId: string): Promise<Result<AsignacionVeedor[]>>;
+  /** RF-09: el veedor necesita saber de qué mesas registra actas. */
+  listarAsignacionesDelVeedor(veedorId: string): Promise<Result<AsignacionVeedor[]>>;
 }

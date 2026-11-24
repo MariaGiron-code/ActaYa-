@@ -11,6 +11,15 @@ export function useAsignacionesDeRecinto(recintoId: string | null) {
   });
 }
 
+/** RF-09: las mesas de las que el veedor registra actas (ver `actas`). */
+export function useMisAsignaciones(veedorId: string | null) {
+  return useQuery({
+    queryKey: ['personal', 'mis-asignaciones', veedorId],
+    queryFn: () => personalContainer.personalRepository.listarAsignacionesDelVeedor(veedorId as string),
+    enabled: veedorId !== null,
+  });
+}
+
 /** RF-07: solo el coordinador de recinto llega a usar esto (ver AsignacionesScreen). */
 export function useAsignarVeedor(rolDeQuienLlama: RolUsuario, recintoId: string | null) {
   const queryClient = useQueryClient();

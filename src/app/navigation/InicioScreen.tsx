@@ -14,7 +14,7 @@ const PENDIENTES_POR_ROL: Record<RolUsuario, string[]> = {
     'Panel de seguimiento en tiempo real (RF-16) — feature "seguimiento"',
   ],
   [RolUsuario.COORDINADOR_RECINTO]: ['Corregir actas de su recinto (RF-12) — feature "actas"'],
-  [RolUsuario.VEEDOR]: ['Registrar actas de sus mesas (RF-09 a RF-14) — feature "actas"'],
+  [RolUsuario.VEEDOR]: [],
 };
 
 /**
@@ -30,7 +30,7 @@ export function InicioScreen() {
   if (!usuario) return null;
 
   return (
-    <Screen>
+    <Screen scrollable>
       <Text style={styles.saludo}>Hola, {usuario.nombres}</Text>
       <Text style={styles.rol}>{usuario.rol.replace('_', ' ')}</Text>
 
@@ -64,6 +64,10 @@ export function InicioScreen() {
             }
           />
         </>
+      ) : null}
+
+      {usuario.rol === RolUsuario.VEEDOR ? (
+        <Button label="Registrar actas" onPress={() => navigation.navigate('RegistrarActa')} />
       ) : null}
 
       <View style={styles.lista}>

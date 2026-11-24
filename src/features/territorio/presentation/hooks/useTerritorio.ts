@@ -18,6 +18,14 @@ export function useMesasDeRecinto(recintoId: string | null) {
   });
 }
 
+export function useMesa(mesaId: string | null) {
+  return useQuery({
+    queryKey: ['territorio', 'mesa', mesaId],
+    queryFn: () => territorioContainer.territorioRepository.obtenerMesa(mesaId as string),
+    enabled: mesaId !== null,
+  });
+}
+
 export function useOrganizacionesConCandidatos() {
   return useQuery({
     queryKey: ['territorio', 'organizaciones'],

@@ -17,4 +17,8 @@ export class PersonalRepositoryImpl implements PersonalRepository {
   listarAsignacionesDeRecinto(recintoId: string): Promise<Result<AsignacionVeedor[]>> {
     return this.datasource.listarAsignacionesDeRecinto(recintoId);
   }
+
+  listarAsignacionesDelVeedor(veedorId: string): Promise<Result<AsignacionVeedor[]>> {
+    return this.datasource.listarAsignacionesDelVeedor(veedorId);
+  }
 }

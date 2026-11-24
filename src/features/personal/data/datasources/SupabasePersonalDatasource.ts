@@ -68,4 +68,15 @@ export class SupabasePersonalDatasource {
     if (error) return fail({ code: 'ERROR_LISTAR_ASIGNACIONES', message: error.message, cause: error });
     return ok((data as AsignacionVeedorRow[]).map(asignacionFromRow));
   }
+
+  async listarAsignacionesDelVeedor(veedorId: string): Promise<Result<AsignacionVeedor[]>> {
+    const { data, error } = await this.client
+      .from('asignaciones_veedor')
+      .select('*')
+      .eq('veedor_id', veedorId)
+      .eq('activa', true);
+
+    if (error) return fail({ code: 'ERROR_LISTAR_ASIGNACIONES', message: error.message, cause: error });
+    return ok((data as AsignacionVeedorRow[]).map(asignacionFromRow));
+  }
 }

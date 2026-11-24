@@ -55,7 +55,7 @@ src/
     auth/          # COMPLETO — patrón de referencia (domain/data/presentation/di)
     territorio/    # COMPLETO — recintos/JRV/organizaciones precargados (ver su README.md: verifica los datos antes de defender)
     personal/      # COMPLETO — asignar/reemplazar veedores (ver su README.md)
-    actas/         # domain listo (incluye ValidarActaUseCase funcionando), falta resto
+    actas/         # COMPLETO (registro); falta la pantalla de corrección RF-12 (ver su README.md)
     seguimiento/    # domain listo, falta data/presentation (ver su README.md)
 supabase/
   functions/        # Edge Functions (Deno): crear-usuario, verificar-cedula, verificar-correo
@@ -140,10 +140,12 @@ npm run format       # Prettier
 ## Qué sigue
 
 Completa `actas` y `seguimiento` siguiendo el patrón de `features/auth`,
-`features/territorio` y `features/personal`. Cada carpeta tiene su propio
-`README.md` con los RF/ADR que resuelve y los pasos sugeridos. Sigue con
-`actas` (vale más en la rúbrica) — ya tiene recintos/JRV/candidatos reales
-precargados y veedores asignables para trabajar contra datos reales, no de
-prueba. Antes de la defensa, revisa la advertencia de
-`features/territorio/README.md` sobre los
-datos del seed (número de JRV y candidatos pendientes de verificación final).
+`features/territorio`, `features/personal` y `features/actas`. Cada carpeta
+tiene su propio `README.md` con los RF/ADR que resuelve y los pasos
+sugeridos. Sigue con `seguimiento` (último feature) y con la pantalla de
+corrección de actas (RF-12) que quedó pendiente dentro de `actas`. Antes de
+la defensa, revisa dos advertencias importantes:
+`features/territorio/README.md` sobre los datos del seed (número de JRV y
+candidatos pendientes de verificación final) y
+`features/actas/README.md` sobre el umbral de nitidez de foto (debes
+recalibrarlo con fotos reales de tu propio teléfono).

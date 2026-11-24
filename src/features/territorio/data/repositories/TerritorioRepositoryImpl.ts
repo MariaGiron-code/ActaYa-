@@ -18,6 +18,10 @@ export class TerritorioRepositoryImpl implements TerritorioRepository {
     return this.datasource.listarMesasPorRecinto(recintoId);
   }
 
+  obtenerMesa(mesaId: string): Promise<Result<Mesa>> {
+    return this.datasource.obtenerMesa(mesaId);
+  }
+
   listarOrganizacionesConCandidatos(): Promise<
     Result<{ organizacion: OrganizacionPolitica; candidatos: Candidato[] }[]>
   > {

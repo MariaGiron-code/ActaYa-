@@ -11,5 +11,7 @@ export interface TerritorioRepository {
   listarRecintos(): Promise<Result<Recinto[]>>;
   agregarRecinto(datos: Omit<Recinto, 'id'>): Promise<Result<Recinto>>;
   listarMesasPorRecinto(recintoId: string): Promise<Result<Mesa[]>>;
+  /** El veedor conoce el `mesaId` por su asignación (`personal`), pero necesita el número de JRV para mostrarlo (`actas`). */
+  obtenerMesa(mesaId: string): Promise<Result<Mesa>>;
   listarOrganizacionesConCandidatos(): Promise<Result<{ organizacion: OrganizacionPolitica; candidatos: Candidato[] }[]>>;
 }
