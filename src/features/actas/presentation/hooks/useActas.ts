@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNetworkStatus } from '@core/network/useNetworkStatus';
+import { personalContainer } from '@features/personal/di/personalContainer';
+import { territorioContainer } from '@features/territorio/di/territorioContainer';
 import { actasContainer } from '../../di/actasContainer';
 import { RegistrarActaInput } from '../../domain/use-cases/RegistrarActaUseCase';
 import { CorregirActaInput } from '../../domain/use-cases/CorregirActaUseCase';
@@ -67,6 +69,30 @@ export function useCorregirActa() {
       }
     },
   });
+}
+
+/**
+ * RNF-05: `onlineManager` evita que una query SIN caché se quede vacía al
+ * perder señal (ver `queryClient.ts`), pero si el veedor NUNCA llegó a
+ * abrir "Registrar actas" con señal, tampoco hay nada que mostrarle —
+ * esto precarga sus mesas y el catálogo de candidatos apenas entra a
+ * Inicio (todavía con señal, normalmente en la sede del recinto), para
+ * que ya estén en caché cuando se vaya a votar sin cobertura.
+ */
+export function usePrecargarDatosVeedor(veedorId: string | null) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!veedorId) return;
+    queryClient.prefetchQuery({
+      queryKey: ['personal', 'mis-asignaciones', veedorId],
+      queryFn: () => personalContainer.personalRepository.listarAsignacionesDelVeedor(veedorId),
+    });
+    queryClient.prefetchQuery({
+      queryKey: ['territorio', 'organizaciones'],
+      queryFn: () => territorioContainer.territorioRepository.listarOrganizacionesConCandidatos(),
+    });
+  }, [veedorId, queryClient]);
 }
 
 /**

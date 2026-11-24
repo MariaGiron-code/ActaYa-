@@ -7,6 +7,7 @@ import { colors, spacing, typography } from '@core/theme';
 import { RolUsuario } from '@features/auth/domain/entities/Usuario';
 import { useSessionStore } from '@features/auth/presentation/store/useSessionStore';
 import { useCerrarSesion } from '@features/auth/presentation/hooks/useAuth';
+import { usePrecargarDatosVeedor } from '@features/actas/presentation/hooks/useActas';
 import type { RootStackParamList } from './types';
 
 const PENDIENTES_POR_ROL: Record<RolUsuario, string[]> = {
@@ -24,6 +25,7 @@ export function InicioScreen() {
   const usuario = useSessionStore((s) => s.usuario);
   const cerrarSesion = useCerrarSesion();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  usePrecargarDatosVeedor(usuario?.rol === RolUsuario.VEEDOR ? usuario.id : null);
 
   if (!usuario) return null;
 
