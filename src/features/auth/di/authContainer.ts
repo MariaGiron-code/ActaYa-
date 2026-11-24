@@ -8,6 +8,7 @@ import { IniciarSesionUseCase } from '../domain/use-cases/IniciarSesionUseCase';
 import { CrearUsuarioUseCase } from '../domain/use-cases/CrearUsuarioUseCase';
 import { EstablecerClaveInicialUseCase } from '../domain/use-cases/EstablecerClaveInicialUseCase';
 import { RecuperarClaveUseCase } from '../domain/use-cases/RecuperarClaveUseCase';
+import { CompletarRecuperacionClaveUseCase } from '../domain/use-cases/CompletarRecuperacionClaveUseCase';
 
 /**
  * Composition root del feature `auth`.
@@ -32,4 +33,5 @@ export const authContainer = {
   crearUsuarioUseCase: new CrearUsuarioUseCase(authRepository, verificationRepository),
   establecerClaveInicialUseCase: new EstablecerClaveInicialUseCase(authRepository),
   recuperarClaveUseCase: new RecuperarClaveUseCase(authRepository),
+  completarRecuperacionClaveUseCase: new CompletarRecuperacionClaveUseCase(authRepository),
 };

@@ -13,5 +13,9 @@ export const supabase = createClient(env.supabaseUrl, env.supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    // RF-05/S-08: el enlace de "olvidé mi clave" necesita intercambiar un
+    // código por sesión desde el deep link (`exchangeCodeForSession`, ver
+    // `completarRecuperacionClave`) — eso solo existe en el flujo PKCE.
+    flowType: 'pkce',
   },
 });

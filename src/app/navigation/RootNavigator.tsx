@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { FeedbackState, Screen } from '@core/ui';
 import { useSessionStore } from '@features/auth/presentation/store/useSessionStore';
 import { useSesionActual } from '@features/auth/presentation/hooks/useAuth';
+import { useManejarEnlaceRecuperacion } from '@features/auth/presentation/hooks/useManejarEnlaceRecuperacion';
 import { LoginScreen } from '@features/auth/presentation/screens/LoginScreen';
 import { RecuperarClaveScreen } from '@features/auth/presentation/screens/RecuperarClaveScreen';
 import { EstablecerClaveInicialScreen } from '@features/auth/presentation/screens/EstablecerClaveInicialScreen';
@@ -34,13 +35,16 @@ function AuthFlow() {
 
 /**
  * Enrutamiento por estado de sesión: sin sesión -> AuthFlow; con clave
- * temporal pendiente -> EstablecerClaveInicialScreen (S-11); si no,
- * InicioScreen (placeholder hasta completar territorio/personal/actas/seguimiento).
+ * temporal pendiente (S-11) o completando una recuperación por correo
+ * (RF-05/S-08, `enRecuperacion` — ver `useManejarEnlaceRecuperacion`) ->
+ * EstablecerClaveInicialScreen; si no, InicioScreen.
  */
 export function RootNavigator() {
+  useManejarEnlaceRecuperacion();
   const { isLoading } = useSesionActual();
   const usuario = useSessionStore((s) => s.usuario);
   const cargando = useSessionStore((s) => s.cargando);
+  const enRecuperacion = useSessionStore((s) => s.enRecuperacion);
 
   if (isLoading || cargando) {
     return (
@@ -59,7 +63,7 @@ export function RootNavigator() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!usuario ? (
           <Stack.Screen name="Auth" component={AuthFlow} />
-        ) : usuario.debeCambiarClave ? (
+        ) : usuario.debeCambiarClave || enRecuperacion ? (
           <Stack.Screen name="EstablecerClaveInicial" component={EstablecerClaveInicialScreen} />
         ) : (
           <>

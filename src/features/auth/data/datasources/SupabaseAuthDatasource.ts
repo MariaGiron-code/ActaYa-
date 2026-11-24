@@ -47,9 +47,34 @@ export class SupabaseAuthDatasource {
   }
 
   async solicitarRecuperacionClave(correo: string): Promise<Result<void>> {
-    const { error } = await this.client.auth.resetPasswordForEmail(correo);
+    // El scheme `actaya://` (app.json) abre la app directamente desde el
+    // correo; sin esto, Supabase manda al Site URL por defecto (una página
+    // web que no existe) y el enlace nunca llega a `completarRecuperacionClave`.
+    // Requiere agregar esta URL en Authentication > URL Configuration >
+    // Redirect URLs del proyecto de Supabase — si no está en esa lista,
+    // Supabase la ignora y cae de nuevo al Site URL por defecto.
+    const { error } = await this.client.auth.resetPasswordForEmail(correo, {
+      redirectTo: 'actaya://recuperar-clave',
+    });
     if (error) return fail({ code: 'ERROR_RECUPERACION', message: error.message, cause: error });
     return ok(undefined);
+  }
+
+  /** RF-05/S-08: intercambia el código del enlace de recuperación por una sesión real. */
+  async completarRecuperacionClave(codigo: string): Promise<Result<SesionActiva>> {
+    const { data, error } = await this.client.auth.exchangeCodeForSession(codigo);
+    if (error || !data.session) {
+      return fail({
+        code: 'ENLACE_RECUPERACION_INVALIDO',
+        message: 'Este enlace de recuperación no es válido o ya caducó. Solicita uno nuevo.',
+        cause: error,
+      });
+    }
+
+    const perfil = await this.obtenerPerfil(data.session.user.id);
+    if (!perfil.ok) return perfil;
+
+    return ok({ usuario: perfil.value, accessToken: data.session.access_token });
   }
 
   async listarSubordinados(): Promise<Result<Usuario[]>> {

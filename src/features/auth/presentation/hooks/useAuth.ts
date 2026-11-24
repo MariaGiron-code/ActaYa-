@@ -79,6 +79,22 @@ export function useRecuperarClave() {
   });
 }
 
+/** RF-05/S-08: segunda mitad de la recuperación — ver `useManejarEnlaceRecuperacion`. */
+export function useCompletarRecuperacionClave() {
+  const setSesion = useSessionStore((s) => s.setSesion);
+  const marcarEnRecuperacion = useSessionStore((s) => s.marcarEnRecuperacion);
+
+  return useMutation({
+    mutationFn: (codigo: string) => authContainer.completarRecuperacionClaveUseCase.ejecutar(codigo),
+    onSuccess: (resultado) => {
+      if (!resultado.ok) return;
+      setSesion(resultado.value);
+      marcarEnRecuperacion(true);
+      setSentryUser(resultado.value.usuario.id, resultado.value.usuario.rol);
+    },
+  });
+}
+
 /** Los veedores/coordinadores creados directamente por quien llama (ver `personal`). */
 export function useSubordinados() {
   return useQuery({

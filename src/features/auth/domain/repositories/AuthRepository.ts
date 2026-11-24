@@ -33,6 +33,9 @@ export interface AuthRepository {
   /** RF-05, S-08: recuperación autónoma por correo verificado. */
   solicitarRecuperacionClave(correo: string): Promise<Result<void>>;
 
+  /** RF-05, S-08: intercambia el código del enlace recibido por correo por una sesión real. */
+  completarRecuperacionClave(codigo: string): Promise<Result<SesionActiva>>;
+
   /** Los usuarios creados directamente por quien llama (RF-01). Usa la misma RLS de `usuarios_select_subordinados`. */
   listarSubordinados(): Promise<Result<Usuario[]>>;
 }

@@ -103,6 +103,11 @@ no una restricción del examen — se puede migrar a Expo Router si lo prefieres
    npx supabase functions deploy verificar-cedula
    npx supabase functions deploy verificar-correo
    ```
+6. **Habilitar el enlace de "olvidé mi clave" (RF-05/S-08):** en el dashboard
+   de Supabase, Authentication → URL Configuration → Redirect URLs, agrega
+   `actaya://recuperar-clave`. Sin este paso, Supabase ignora el `redirectTo`
+   que manda la app y el correo de recuperación lleva a una página web que
+   no existe (el Site URL por defecto) en vez de abrir ActaYa.
 6. **Crear la primera cuenta** (coordinador provincial): según S-16, nadie lo crea desde la app — insértala directamente en Supabase (SQL Editor: crea el usuario en Auth y su fila en `usuarios` con `rol = 'COORDINADOR_PROVINCIAL'`, `creado_por_id = null`).
 
 ## Ejecutar en desarrollo
