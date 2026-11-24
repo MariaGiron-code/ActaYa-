@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { NavigationContainer, RouteProp } from '@react-navigation/native';
+import { NavigationContainer, RouteProp, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator, NativeStackNavigationOptions } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { animaciones, DireccionTransicion, FeedbackState, Screen } from '@core/ui';
 import { colors, typography } from '@core/theme';
+import { integracionNavegacion, marcarPantalla, useVistaMonitoreada } from '@core/monitoring/sentry';
 import { useSessionStore } from '@features/auth/presentation/store/useSessionStore';
 import { useSesionActual } from '@features/auth/presentation/hooks/useAuth';
 import { useManejarEnlaceRecuperacion } from '@features/auth/presentation/hooks/useManejarEnlaceRecuperacion';
@@ -59,6 +60,9 @@ function AuthFlow() {
   // undefined en el primer montaje: la entrada inicial ya la anima el stack.
   const [transicion, setTransicion] = useState<DireccionTransicion>();
 
+  // RF-17: Login y Recuperar clave comparten la ruta "Auth"; se distinguen aquí.
+  useVistaMonitoreada(mostrarRecuperar ? 'RecuperarClave' : 'Login');
+
   return mostrarRecuperar ? (
     <RecuperarClaveScreen
       transicion={transicion}
@@ -85,6 +89,7 @@ function AuthFlow() {
  * EstablecerClaveInicialScreen; si no, InicioScreen.
  */
 export function RootNavigator() {
+  const navegacion = useNavigationContainerRef<RootStackParamList>();
   useManejarEnlaceRecuperacion();
   const { isLoading } = useSesionActual();
   const usuario = useSessionStore((s) => s.usuario);
@@ -104,7 +109,19 @@ export function RootNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer
+      ref={navegacion}
+      // RF-17: Sentry sabe en qué pantalla estaba la persona cuando algo falló.
+      onReady={() => {
+        integracionNavegacion.registerNavigationContainer(navegacion);
+        const ruta = navegacion.getCurrentRoute()?.name;
+        if (ruta) marcarPantalla(ruta);
+      }}
+      onStateChange={() => {
+        const ruta = navegacion.getCurrentRoute()?.name;
+        if (ruta) marcarPantalla(ruta);
+      }}
+    >
       <Stack.Navigator
         screenOptions={opcionesDePantalla}
         // Íconos de la barra de estado en blanco sobre el header azul, y

@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -116,11 +116,18 @@ export function InicioScreen() {
   if (!usuario) return null;
 
   const acciones = ACCIONES_POR_ROL[usuario.rol];
+  const esProvincial = usuario.rol === RolUsuario.COORDINADOR_PROVINCIAL;
 
   return (
     <Screen scrollable fondoMarca>
       <View style={styles.saludo}>
-        <ActinMascot size={104} />
+        {esProvincial ? (
+          <DisparadorDeFallo>
+            <ActinMascot size={104} />
+          </DisparadorDeFallo>
+        ) : (
+          <ActinMascot size={104} />
+        )}
         <View style={styles.textosSaludo}>
           <Text style={styles.hola}>Hola, {usuario.nombres}</Text>
           <View style={styles.chipRol}>
@@ -170,6 +177,36 @@ export function InicioScreen() {
         <Text style={styles.textoSalir}>{cerrarSesion.isPending ? 'Cerrando sesión…' : 'Cerrar sesión'}</Text>
       </Pressable>
     </Screen>
+  );
+}
+
+/**
+ * RF-17 / rúbrica: "provocar un fallo en la aplicación y mostrar el reporte
+ * recibido en su herramienta de monitoreo". Oculto a propósito (mantener
+ * presionado a Actín 2 s) y solo para el coordinador provincial, que es
+ * quien revisa los fallos en Sentry (S-15). Lanza un error real de render:
+ * lo atrapa LimiteDeErrores y Sentry lo reporta con pantalla, celular,
+ * versión de Android y usuario.
+ */
+function DisparadorDeFallo({ children }: { children: ReactNode }) {
+  const [fallar, setFallar] = useState(false);
+
+  if (fallar) {
+    throw new Error('Fallo de prueba provocado desde Inicio (RF-17)');
+  }
+
+  return (
+    <Pressable
+      delayLongPress={2000}
+      onLongPress={() => {
+        haptics.advertencia();
+        setFallar(true);
+      }}
+      accessibilityRole="image"
+      accessibilityLabel="Actín"
+    >
+      {children}
+    </Pressable>
   );
 }
 

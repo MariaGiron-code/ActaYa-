@@ -1,5 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { AppError, fail, ok, Result } from '@core/utils/result';
+import { reportarFalloDeTarea } from '@core/monitoring/sentry';
 import { Acta } from '../../domain/entities/Acta';
 import { ConflictoVersion } from '../../domain/repositories/ActasRepository';
 import { actaFromRow, actaToInsertRow, ActaRow } from '../dto/ActaDTO';
@@ -14,7 +15,13 @@ export class SupabaseActasDatasource {
 
   async enviar(acta: Acta): Promise<Result<Acta, ConflictoVersion | AppError>> {
     const subida = await this.subirFoto(acta.id, acta.registradoPorId, acta.fotoUri as string);
-    if (!subida.ok) return fail(subida.error);
+    if (!subida.ok) {
+      // RF-17: "una foto que no se sube" — la sincronización marca el acta
+      // como fallida y reintenta, así que este es el único lugar donde el
+      // error real todavía está disponible para reportarlo.
+      reportarFalloDeTarea(subida.error, 'enviar_acta:subir_foto');
+      return fail(subida.error);
+    }
 
     const { error } = await this.client.from('actas').insert(actaToInsertRow(acta, subida.value));
 
@@ -24,7 +31,9 @@ export class SupabaseActasDatasource {
         // llegó, el reintento no debe tratarse como un error.
         return ok(acta);
       }
-      return fail({ code: 'ERROR_ENVIAR_ACTA', message: error.message, cause: error });
+      const fallo: AppError = { code: 'ERROR_ENVIAR_ACTA', message: error.message, cause: error };
+      reportarFalloDeTarea(fallo, 'enviar_acta:guardar');
+      return fail(fallo);
     }
 
     return ok(acta);

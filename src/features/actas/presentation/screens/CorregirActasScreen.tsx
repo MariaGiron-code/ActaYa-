@@ -21,6 +21,7 @@ import {
   ButtonGroup,
 } from '@core/ui';
 import { colors, radius, spacing, typography } from '@core/theme';
+import { useVistaMonitoreada } from '@core/monitoring/sentry';
 import { useMesa, useOrganizacionesConCandidatos } from '@features/territorio/presentation/hooks/useTerritorio';
 import { useActasCorregibles, useCorregirActa } from '../hooks/useActas';
 import { Acta } from '../../domain/entities/Acta';
@@ -34,6 +35,7 @@ import { ConflictoVersion } from '../../domain/repositories/ActasRepository';
 export function CorregirActasScreen() {
   const actas = useActasCorregibles();
   const [actaSeleccionada, setActaSeleccionada] = useState<Acta | null>(null);
+  useVistaMonitoreada(actaSeleccionada ? 'Formulario de corrección' : 'Lista de actas');
   const [transicion, setTransicion] = useState<DireccionTransicion>();
 
   if (actaSeleccionada) {

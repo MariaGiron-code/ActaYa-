@@ -1,4 +1,5 @@
-import { onlineManager, QueryClient } from '@tanstack/react-query';
+import { MutationCache, onlineManager, QueryCache, QueryClient } from '@tanstack/react-query';
+import { reportarSiEsFallo, Sentry } from '@core/monitoring/sentry';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
@@ -25,6 +26,19 @@ onlineManager.setEventListener((setOnline) => {
  * el veedor cierre la app en un recinto rural sin señal.
  */
 export const queryClient = new QueryClient({
+  // RF-17: un solo punto para reportar los fallos que impiden completar una
+  // tarea. Los casos de uso devuelven `Result` en vez de lanzar, así que el
+  // fallo llega como éxito de la promesa con `ok: false` (onSuccess); onError
+  // cubre lo que sí se lanzó por un bug.
+  queryCache: new QueryCache({
+    onSuccess: (data, query) => reportarSiEsFallo(data, `consulta:${String(query.queryKey[0])}`),
+    onError: (error, query) =>
+      Sentry.captureException(error, { tags: { tipo: 'excepcion', tarea: `consulta:${String(query.queryKey[0])}` } }),
+  }),
+  mutationCache: new MutationCache({
+    onSuccess: (data) => reportarSiEsFallo(data, 'accion'),
+    onError: (error) => Sentry.captureException(error, { tags: { tipo: 'excepcion', tarea: 'accion' } }),
+  }),
   defaultOptions: {
     queries: {
       retry: 3,

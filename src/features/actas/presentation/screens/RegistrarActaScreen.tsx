@@ -23,6 +23,7 @@ import {
   ESPACIO_ENTRE_BOTONES,
 } from '@core/ui';
 import { colors, radius, spacing, typography } from '@core/theme';
+import { useVistaMonitoreada } from '@core/monitoring/sentry';
 import { useSessionStore } from '@features/auth/presentation/store/useSessionStore';
 import { useMisAsignaciones } from '@features/personal/presentation/hooks/usePersonal';
 import { AsignacionVeedor } from '@features/personal/domain/entities/AsignacionVeedor';
@@ -52,6 +53,7 @@ export function RegistrarActaScreen() {
   const usuario = useSessionStore((s) => s.usuario);
   const misAsignaciones = useMisAsignaciones(usuario?.id ?? null);
   const [asignacionSeleccionada, setAsignacionSeleccionada] = useState<AsignacionVeedor | null>(null);
+  useVistaMonitoreada(asignacionSeleccionada ? 'Formulario de acta' : 'Mis mesas');
   const [transicion, setTransicion] = useState<DireccionTransicion>();
   const alertaDemora = useAlertaDemoraRegistro(usuario?.id ?? null);
 

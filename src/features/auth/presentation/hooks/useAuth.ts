@@ -15,7 +15,7 @@ export function useSesionActual() {
     queryFn: async () => {
       const sesion = await authContainer.authRepository.obtenerSesionActual();
       setSesion(sesion);
-      setSentryUser(sesion?.usuario.id ?? null, sesion?.usuario.rol);
+      setSentryUser(sesion?.usuario ?? null);
       setCargando(false);
       return sesion;
     },
@@ -31,7 +31,7 @@ export function useIniciarSesion() {
     onSuccess: (resultado) => {
       if (resultado.ok) {
         setSesion(resultado.value);
-        setSentryUser(resultado.value.usuario.id, resultado.value.usuario.rol);
+        setSentryUser(resultado.value.usuario);
       }
     },
   });
@@ -90,7 +90,7 @@ export function useCompletarRecuperacionClave() {
       if (!resultado.ok) return;
       setSesion(resultado.value);
       marcarEnRecuperacion(true);
-      setSentryUser(resultado.value.usuario.id, resultado.value.usuario.rol);
+      setSentryUser(resultado.value.usuario);
     },
   });
 }
