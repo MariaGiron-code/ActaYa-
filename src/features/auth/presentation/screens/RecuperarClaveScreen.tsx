@@ -4,7 +4,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, Screen, TextField } from '@core/ui';
-import { spacing, typography } from '@core/theme';
+import { colors, spacing, typography } from '@core/theme';
 import { useRecuperarClave } from '../hooks/useAuth';
 
 const esquema = z.object({ correo: z.string().email('Correo no válido') });
@@ -22,6 +22,9 @@ export function RecuperarClaveScreen({ onVolver }: { onVolver: () => void }) {
   const onSubmit = handleSubmit(({ correo }) =>
     recuperarClave.mutate(correo, { onSuccess: (r) => r.ok && setEnviado(true) })
   );
+
+  const errorDelServidor =
+    recuperarClave.data && !recuperarClave.data.ok ? recuperarClave.data.error.message : null;
 
   if (enviado) {
     return (
@@ -50,6 +53,8 @@ export function RecuperarClaveScreen({ onVolver }: { onVolver: () => void }) {
           />
         )}
       />
+      {errorDelServidor ? <Text style={styles.errorServidor}>{errorDelServidor}</Text> : null}
+
       <Button label="Enviar enlace de recuperación" onPress={onSubmit} loading={recuperarClave.isPending} />
       <Button label="Volver" variant="outline" onPress={onVolver} />
     </Screen>
@@ -59,4 +64,5 @@ export function RecuperarClaveScreen({ onVolver }: { onVolver: () => void }) {
 const styles = StyleSheet.create({
   titulo: { ...typography.h2, marginTop: spacing.lg, marginBottom: spacing.md },
   ayuda: { ...typography.body, marginBottom: spacing.lg },
+  errorServidor: { ...typography.body, color: colors.error, textAlign: 'center', marginBottom: spacing.sm },
 });

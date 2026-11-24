@@ -43,6 +43,10 @@ export function useReemplazarVeedor(rolDeQuienLlama: RolUsuario, recintoId: stri
     onSuccess: (resultado) => {
       if (resultado.ok) {
         queryClient.invalidateQueries({ queryKey: ['personal', 'asignaciones', recintoId] });
+        // La rama "persona nueva" crea una cuenta por debajo (ver
+        // ReemplazarVeedorUseCase) — sin esto, el veedor recién creado no
+        // aparece en "elegir existente" hasta que venza el caché.
+        queryClient.invalidateQueries({ queryKey: ['auth', 'subordinados'] });
       }
     },
   });

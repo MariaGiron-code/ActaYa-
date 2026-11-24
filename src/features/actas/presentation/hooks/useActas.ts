@@ -37,7 +37,20 @@ export function useRegistrarActa() {
   return useMutation({
     mutationFn: (datos: RegistrarActaInput) => actasContainer.registrarActaUseCase.ejecutar(datos),
     onSuccess: (resultado) => {
-      if (resultado.ok) queryClient.invalidateQueries({ queryKey: CLAVE_PENDIENTES });
+      if (!resultado.ok) return;
+      queryClient.invalidateQueries({ queryKey: CLAVE_PENDIENTES });
+      // No basta con esperar a que `useSincronizarActasAlVolverOnline`
+      // detecte un cambio de conectividad: ese efecto solo reacciona a la
+      // TRANSICIÓN offline->online, así que si el veedor ya tenía señal
+      // (el caso normal) el acta se quedaba en "en_proceso" para siempre.
+      // Aquí se intenta enviar de una vez; si de verdad no hay señal,
+      // `enviar()` simplemente falla y el efecto de arriba la reintentará.
+      actasContainer.sincronizarActasPendientesUseCase.ejecutar().then((sincronizado) => {
+        if (sincronizado.ok) {
+          queryClient.invalidateQueries({ queryKey: CLAVE_PENDIENTES });
+          queryClient.invalidateQueries({ queryKey: CLAVE_CORREGIBLES });
+        }
+      });
     },
   });
 }
@@ -68,7 +81,10 @@ export function useSincronizarActasAlVolverOnline() {
   useEffect(() => {
     if (!isOnline) return;
     actasContainer.sincronizarActasPendientesUseCase.ejecutar().then((resultado) => {
-      if (resultado.ok) queryClient.invalidateQueries({ queryKey: CLAVE_PENDIENTES });
+      if (resultado.ok) {
+        queryClient.invalidateQueries({ queryKey: CLAVE_PENDIENTES });
+        queryClient.invalidateQueries({ queryKey: CLAVE_CORREGIBLES });
+      }
     });
   }, [isOnline, queryClient]);
 }

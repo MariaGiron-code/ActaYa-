@@ -53,8 +53,12 @@ export function useCerrarSesion() {
 
 /** Un coordinador crea a su subordinado (RF-01). */
 export function useCrearUsuario(rolDeQuienCrea: RolUsuario) {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (datos: CrearUsuarioInput) => authContainer.crearUsuarioUseCase.ejecutar(datos, rolDeQuienCrea),
+    onSuccess: (resultado) => {
+      if (resultado.ok) queryClient.invalidateQueries({ queryKey: ['auth', 'subordinados'] });
+    },
   });
 }
 

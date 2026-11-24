@@ -63,6 +63,14 @@ function FormularioCorreccion({ acta, onVolver }: { acta: Acta; onVolver: () => 
   const organizaciones = useOrganizacionesConCandidatos();
   const corregirActa = useCorregirActa();
 
+  // Se guarda la acta "tal como la conoce el cliente" por separado del prop
+  // original: si llega un conflicto de versión (S-05) y el usuario carga la
+  // versión del servidor, el PRÓXIMO intento de guardar debe partir de esa
+  // versión nueva — si se siguiera usando `acta` (el prop, nunca cambia),
+  // cada reintento volvería a chocar con la misma versión vieja para
+  // siempre, sin poder guardar jamás.
+  const [actaActual, setActaActual] = useState(acta);
+
   const [votos, setVotos] = useState<Record<string, string>>(
     Object.fromEntries(Object.entries(acta.votosPorOrganizacion).map(([id, v]) => [id, String(v)]))
   );
@@ -97,7 +105,7 @@ function FormularioCorreccion({ acta, onVolver }: { acta: Acta; onVolver: () => 
           votosBlancos: Number(votosBlancos) || 0,
           totalSufragantes: Number(totalSufragantes) || 0,
         },
-        actaActual: acta,
+        actaActual,
       },
       { onSuccess: (r) => r.ok && onVolver() }
     );
@@ -148,6 +156,7 @@ function FormularioCorreccion({ acta, onVolver }: { acta: Acta; onVolver: () => 
             label="Volver a cargar esta versión"
             variant="outline"
             onPress={() => {
+              setActaActual(conflicto.versionServidor);
               setVotos(
                 Object.fromEntries(
                   Object.entries(conflicto.versionServidor.votosPorOrganizacion).map(([id, v]) => [id, String(v)])

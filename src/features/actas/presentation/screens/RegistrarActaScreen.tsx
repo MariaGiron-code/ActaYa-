@@ -133,6 +133,19 @@ function FormularioActa({
       );
   }, [dignidad, organizaciones.data]);
 
+  function elegirDignidad(nueva: Dignidad) {
+    // Cada dignidad es un acta distinta con su propia foto física: si no se
+    // limpia esto, al cancelar una y elegir la otra quedaban los votos y la
+    // foto de la primera precargados en el formulario de la segunda.
+    setVotos({});
+    setVotosNulos('0');
+    setVotosBlancos('0');
+    setTotalSufragantes('');
+    setFotoUri(null);
+    setUbicacion(null);
+    setDignidad(nueva);
+  }
+
   async function capturarEvidencia() {
     const resultado = await capturarFoto.mutateAsync();
     if (resultado.ok) {
@@ -179,7 +192,7 @@ function FormularioActa({
         <View style={styles.acciones}>
           <Text style={styles.subtitulo}>¿Qué acta vas a registrar?</Text>
           {DIGNIDADES.map((d) => (
-            <Button key={d.valor} label={d.etiqueta} onPress={() => setDignidad(d.valor)} />
+            <Button key={d.valor} label={d.etiqueta} onPress={() => elegirDignidad(d.valor)} />
           ))}
           <Button label="Volver" variant="outline" onPress={onVolver} />
         </View>

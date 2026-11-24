@@ -26,7 +26,10 @@ export class SupabaseSeguimientoDatasource {
   }
 
   /**
-   * ADR-10: un canal de Supabase Realtime escuchando INSERT en `actas`.
+   * ADR-10: un canal de Supabase Realtime escuchando INSERT y UPDATE en
+   * `actas` — UPDATE hace falta porque una corrección (RF-12) cambia los
+   * votos de una acta ya existente, no crea una fila nueva; sin esto, una
+   * corrección no se reflejaba en el panel hasta recargar a mano.
    * Devuelve la función para cancelar la suscripción — quien la use DEBE
    * llamarla al desmontar (consecuencia documentada en el ADR: fugas de
    * memoria/conexión si no se hace).
@@ -35,6 +38,7 @@ export class SupabaseSeguimientoDatasource {
     const canal = this.client
       .channel('seguimiento-actas')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'actas' }, onCambio)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'actas' }, onCambio)
       .subscribe();
 
     return () => {
