@@ -30,6 +30,10 @@ export class CrearUsuarioUseCase {
       });
     }
 
+    if (datos.rol === RolUsuario.COORDINADOR_RECINTO && !datos.recintoId) {
+      return fail({ code: 'RECINTO_REQUERIDO', message: 'Selecciona el recinto que va a coordinar.' });
+    }
+
     if (!esFormatoCedulaValido(datos.cedula)) {
       return fail({ code: 'CEDULA_FORMATO_INVALIDO', message: 'La cédula ingresada no es válida.' });
     }

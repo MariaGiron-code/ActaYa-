@@ -50,10 +50,13 @@ serve(async (req: Request) => {
       .single();
     if (!quienCrea) return json({ error: 'Perfil de quien crea no encontrado' }, 403);
 
-    const { cedula, nombres, apellidos, telefono, correo, rol } = await req.json();
+    const { cedula, nombres, apellidos, telefono, correo, rol, recintoId } = await req.json();
 
     if (ROL_SUPERIOR[rol] !== quienCrea.rol) {
       return json({ error: 'No tienes permiso para crear usuarios con ese rol.' }, 403);
+    }
+    if (rol === 'COORDINADOR_RECINTO' && !recintoId) {
+      return json({ error: 'Selecciona el recinto que va a coordinar.' }, 400);
     }
     if (!esFormatoCedulaValido(cedula)) {
       return json({ error: 'Cédula no válida.' }, 400);
@@ -96,6 +99,7 @@ serve(async (req: Request) => {
         correo_verificado: true,
         rol,
         creado_por_id: userData.user.id,
+        recinto_id: rol === 'COORDINADOR_RECINTO' ? recintoId : null,
         debe_cambiar_clave: true,
         activo: true,
       })

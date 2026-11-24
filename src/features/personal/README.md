@@ -1,14 +1,36 @@
 # Feature: personal
 
-**Estado:** domain listo, falta `data/` y `presentation/`.
+**Estado:** completo (domain + data + presentation + di).
 
 ## Qué resuelve
-- RF-07: el coordinador de recinto asigna un veedor a cada mesa (un mismo veedor puede cubrir varias).
-- RF-08 / S-03: reemplazo de un veedor ausente el mismo día, incluso por alguien externo a la organización — en ese caso el coordinador registra sus datos como un alta nueva (reutiliza `features/auth` `CrearUsuarioUseCase`, rol `VEEDOR`) y luego crea la `AsignacionVeedor` con `reemplazaAsignacionId` apuntando a la asignación original.
-- Confidencialidad (RF-15): este feature es también donde se aplican los filtros de "solo mis mesas / solo mi recinto" — refuérzalo con políticas RLS en Supabase, no solo en la app.
+- RF-07: el coordinador de recinto asigna un veedor a cada mesa de su recinto.
+- RF-08 / S-03: reemplazo de un veedor ausente el mismo día, con un veedor
+  existente o con una persona externa que se da de alta en el momento
+  (`ReemplazarVeedorUseCase` reutiliza `authContainer.crearUsuarioUseCase` —
+  la verificación real de cédula/correo no se relaja por ser urgente).
+- Confidencialidad (RF-15): un coordinador de recinto solo ve/edita las
+  asignaciones de SU recinto; el coordinador provincial las ve todas.
+  Reforzado con RLS en `supabase/migrations/0004_personal.sql`, no solo en
+  el cliente.
 
-## Qué falta construir
-1. Tabla `asignaciones_veedor` en Supabase + políticas RLS (un veedor solo lee sus propias filas; un coordinador de recinto solo las de su recinto).
-2. `data/` y `di/personalContainer.ts` (mismo patrón que `features/auth`).
-3. `presentation/` — pantalla para el coordinador de recinto: lista de mesas de su recinto, asignar/reemplazar veedor.
-4. Caso de uso `ReemplazarVeedorUseCase` que decida si el reemplazo es con un veedor existente o requiere crear una cuenta nueva primero.
+## Pieza que faltaba y se agregó
+El esquema original (`0001_usuarios.sql`) no tenía forma de saber qué
+recinto coordina un `COORDINADOR_RECINTO` — necesario para la RLS de arriba
+y para que la pantalla sepa qué mesas mostrarle. Se agregó:
+- Columna `usuarios.recinto_id` (migración `0004_personal.sql`).
+- Campo `recintoId` en `CrearUsuarioInput`/`Usuario` (feature `auth`) y un
+  selector de recinto en `CrearUsuarioScreen` cuando se crea un
+  `COORDINADOR_RECINTO`.
+- `AuthRepository.listarSubordinados()` (antes no expuesto, aunque la RLS
+  `usuarios_select_subordinados` ya lo permitía desde 0001) — lo usa esta
+  pantalla para ofrecer "elegir veedor existente".
+
+## Qué se construyó
+- `data/dto/AsignacionVeedorDTO.ts`, `data/datasources/SupabasePersonalDatasource.ts`, `data/repositories/PersonalRepositoryImpl.ts`.
+- `domain/use-cases/AsignarVeedorUseCase.ts` (RF-07) y `ReemplazarVeedorUseCase.ts` (RF-08/S-03, con rama "veedor existente" y rama "persona nueva").
+- `presentation/hooks/usePersonal.ts` + `presentation/screens/AsignacionesScreen.tsx`.
+- `di/personalContainer.ts` — reutiliza `authContainer.crearUsuarioUseCase` en vez de duplicarlo.
+- Registrado en `src/app/navigation/RootNavigator.tsx` (rutas `Asignaciones` y `CrearUsuario`), con botones desde `InicioScreen` para `COORDINADOR_PROVINCIAL` (crear coordinador de recinto) y `COORDINADOR_RECINTO` (ver "Mis veedores" / crear veedor).
+
+## Qué falta (fuera del alcance de este feature)
+- `AsignacionVeedor` no se consulta todavía desde `actas` (quién registra cada acta) ni desde `seguimiento` (RF-16 necesita saber cuántas mesas tienen veedor asignado).

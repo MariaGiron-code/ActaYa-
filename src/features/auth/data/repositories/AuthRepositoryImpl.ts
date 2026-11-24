@@ -35,4 +35,8 @@ export class AuthRepositoryImpl implements AuthRepository {
   solicitarRecuperacionClave(correo: string): Promise<Result<void>> {
     return this.authDatasource.solicitarRecuperacionClave(correo);
   }
+
+  listarSubordinados(): Promise<Result<Usuario[]>> {
+    return this.authDatasource.listarSubordinados();
+  }
 }

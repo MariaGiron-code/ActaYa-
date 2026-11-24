@@ -25,6 +25,8 @@ export interface Usuario {
   correoVerificado: boolean;
   rol: RolUsuario;
   creadoPorId: string | null;
+  /** Solo aplica a COORDINADOR_RECINTO: el recinto que coordina (RF-07, RF-15). */
+  recintoId: string | null;
   /** S-11: la clave temporal caduca en el primer ingreso. */
   debeCambiarClave: boolean;
   activo: boolean;

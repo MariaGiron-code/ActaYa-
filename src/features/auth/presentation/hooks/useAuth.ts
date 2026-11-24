@@ -72,3 +72,11 @@ export function useRecuperarClave() {
     mutationFn: (correo: string) => authContainer.recuperarClaveUseCase.ejecutar(correo),
   });
 }
+
+/** Los veedores/coordinadores creados directamente por quien llama (ver `personal`). */
+export function useSubordinados() {
+  return useQuery({
+    queryKey: ['auth', 'subordinados'],
+    queryFn: () => authContainer.authRepository.listarSubordinados(),
+  });
+}

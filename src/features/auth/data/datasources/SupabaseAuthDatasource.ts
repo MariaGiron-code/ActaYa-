@@ -1,7 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { fail, ok, Result } from '@core/utils/result';
 import { usuarioFromRow, UsuarioRow } from '../dto/UsuarioDTO';
-import { SesionActiva } from '../../domain/entities/Usuario';
+import { SesionActiva, Usuario } from '../../domain/entities/Usuario';
 
 /** Todo lo que toca directamente `supabase.auth` y la tabla `usuarios`. */
 export class SupabaseAuthDatasource {
@@ -50,6 +50,20 @@ export class SupabaseAuthDatasource {
     const { error } = await this.client.auth.resetPasswordForEmail(correo);
     if (error) return fail({ code: 'ERROR_RECUPERACION', message: error.message, cause: error });
     return ok(undefined);
+  }
+
+  async listarSubordinados(): Promise<Result<Usuario[]>> {
+    const { data: sesion } = await this.client.auth.getSession();
+    if (!sesion.session) return fail({ code: 'NO_AUTENTICADO', message: 'No hay sesión activa.' });
+
+    const { data, error } = await this.client
+      .from('usuarios')
+      .select('*')
+      .eq('creado_por_id', sesion.session.user.id)
+      .order('nombres');
+
+    if (error) return fail({ code: 'ERROR_LISTAR_SUBORDINADOS', message: error.message, cause: error });
+    return ok((data as UsuarioRow[]).map(usuarioFromRow));
   }
 
   private async obtenerPerfil(userId: string) {

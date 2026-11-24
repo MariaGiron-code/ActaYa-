@@ -13,10 +13,7 @@ const PENDIENTES_POR_ROL: Record<RolUsuario, string[]> = {
   [RolUsuario.COORDINADOR_PROVINCIAL]: [
     'Panel de seguimiento en tiempo real (RF-16) — feature "seguimiento"',
   ],
-  [RolUsuario.COORDINADOR_RECINTO]: [
-    'Asignar/reemplazar veedores (RF-07, RF-08) — feature "personal"',
-    'Corregir actas de su recinto (RF-12) — feature "actas"',
-  ],
+  [RolUsuario.COORDINADOR_RECINTO]: ['Corregir actas de su recinto (RF-12) — feature "actas"'],
   [RolUsuario.VEEDOR]: ['Registrar actas de sus mesas (RF-09 a RF-14) — feature "actas"'],
 };
 
@@ -38,7 +35,35 @@ export function InicioScreen() {
       <Text style={styles.rol}>{usuario.rol.replace('_', ' ')}</Text>
 
       {usuario.rol === RolUsuario.COORDINADOR_PROVINCIAL ? (
-        <Button label="Ver recintos" onPress={() => navigation.navigate('Recintos')} />
+        <>
+          <Button label="Ver recintos" onPress={() => navigation.navigate('Recintos')} />
+          <Button
+            label="Crear coordinador de recinto"
+            variant="outline"
+            onPress={() =>
+              navigation.navigate('CrearUsuario', {
+                rolDeQuienCrea: RolUsuario.COORDINADOR_PROVINCIAL,
+                rolACrear: RolUsuario.COORDINADOR_RECINTO,
+              })
+            }
+          />
+        </>
+      ) : null}
+
+      {usuario.rol === RolUsuario.COORDINADOR_RECINTO ? (
+        <>
+          <Button label="Mis veedores" onPress={() => navigation.navigate('Asignaciones')} />
+          <Button
+            label="Crear veedor"
+            variant="outline"
+            onPress={() =>
+              navigation.navigate('CrearUsuario', {
+                rolDeQuienCrea: RolUsuario.COORDINADOR_RECINTO,
+                rolACrear: RolUsuario.VEEDOR,
+              })
+            }
+          />
+        </>
       ) : null}
 
       <View style={styles.lista}>

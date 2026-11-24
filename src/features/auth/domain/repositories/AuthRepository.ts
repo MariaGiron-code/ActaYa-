@@ -8,6 +8,8 @@ export type CrearUsuarioInput = {
   telefono: string;
   correo: string;
   rol: RolUsuario;
+  /** Obligatorio cuando `rol` es COORDINADOR_RECINTO: el recinto que coordinará (RF-07, RF-15). */
+  recintoId?: string;
   /** Solo aplica cuando un coordinador de recinto reemplaza a un veedor ausente (RF-08, S-03). */
   mesasAsignadas?: string[];
 };
@@ -30,4 +32,7 @@ export interface AuthRepository {
 
   /** RF-05, S-08: recuperación autónoma por correo verificado. */
   solicitarRecuperacionClave(correo: string): Promise<Result<void>>;
+
+  /** Los usuarios creados directamente por quien llama (RF-01). Usa la misma RLS de `usuarios_select_subordinados`. */
+  listarSubordinados(): Promise<Result<Usuario[]>>;
 }

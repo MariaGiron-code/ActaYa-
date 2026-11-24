@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, RouteProp } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { FeedbackState, Screen } from '@core/ui';
 import { useSessionStore } from '@features/auth/presentation/store/useSessionStore';
@@ -7,10 +7,18 @@ import { useSesionActual } from '@features/auth/presentation/hooks/useAuth';
 import { LoginScreen } from '@features/auth/presentation/screens/LoginScreen';
 import { RecuperarClaveScreen } from '@features/auth/presentation/screens/RecuperarClaveScreen';
 import { EstablecerClaveInicialScreen } from '@features/auth/presentation/screens/EstablecerClaveInicialScreen';
+import { CrearUsuarioScreen } from '@features/auth/presentation/screens/CrearUsuarioScreen';
 import { RecintosScreen } from '@features/territorio/presentation/screens/RecintosScreen';
+import { AsignacionesScreen } from '@features/personal/presentation/screens/AsignacionesScreen';
+import { RootStackParamList } from './types';
 import { InicioScreen } from './InicioScreen';
 
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+/** Adapta `CrearUsuarioScreen` (recibe props directas) a la ruta (recibe params). */
+function CrearUsuarioRoute({ route }: { route: RouteProp<RootStackParamList, 'CrearUsuario'> }) {
+  return <CrearUsuarioScreen rolDeQuienCrea={route.params.rolDeQuienCrea} rolACrear={route.params.rolACrear} />;
+}
 
 function AuthFlow() {
   const [mostrarRecuperar, setMostrarRecuperar] = useState(false);
@@ -57,6 +65,16 @@ export function RootNavigator() {
               name="Recintos"
               component={RecintosScreen}
               options={{ headerShown: true, title: 'Recintos' }}
+            />
+            <Stack.Screen
+              name="Asignaciones"
+              component={AsignacionesScreen}
+              options={{ headerShown: true, title: 'Mis veedores' }}
+            />
+            <Stack.Screen
+              name="CrearUsuario"
+              component={CrearUsuarioRoute}
+              options={{ headerShown: true, title: 'Registrar persona' }}
             />
           </>
         )}
