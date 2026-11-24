@@ -55,7 +55,7 @@ src/
     auth/          # COMPLETO — patrón de referencia (domain/data/presentation/di)
     territorio/    # COMPLETO — recintos/JRV/organizaciones precargados (ver su README.md: verifica los datos antes de defender)
     personal/      # COMPLETO — asignar/reemplazar veedores (ver su README.md)
-    actas/         # COMPLETO (registro); falta la pantalla de corrección RF-12 (ver su README.md)
+    actas/         # COMPLETO — registro y corrección (ver su README.md)
     seguimiento/    # COMPLETO — panel en tiempo real con Realtime y gráficos (ver su README.md)
 supabase/
   functions/        # Edge Functions (Deno): crear-usuario, verificar-cedula, verificar-correo
@@ -139,11 +139,11 @@ npm run format       # Prettier
 
 ## Qué sigue
 
-Las 5 features base están completas. Lo único que queda es la pantalla de
-corrección de actas (RF-12), documentada en `features/actas/README.md` — el
-dominio y los datos ya están listos, falta la UI. Antes de la defensa,
-revisa dos advertencias importantes:
+Las 5 features base están completas, incluyendo la corrección de actas
+(RF-12). Lo que queda es fuera de código: generar el APK de entrega,
+provocar un fallo real y mostrar su reporte en Sentry (lo pide la rúbrica
+explícitamente), y dos advertencias a revisar antes de la defensa:
 `features/territorio/README.md` sobre los datos del seed (número de JRV y
-candidatos pendientes de verificación final) y
+candidatos pendientes de verificación final contra la papeleta oficial) y
 `features/actas/README.md` sobre el umbral de nitidez de foto (debes
 recalibrarlo con fotos reales de tu propio teléfono).

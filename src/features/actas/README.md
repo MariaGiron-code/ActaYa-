@@ -1,7 +1,7 @@
 # Feature: actas
 
-**Estado:** completo (domain + data + di + presentation de registro). La
-pantalla de **corrección** (RF-12) queda pendiente — ver abajo.
+**Estado:** completo (domain + data + di + presentation — registro y
+corrección).
 
 ## Qué resuelve
 - RF-09/RF-13/RF-14: el veedor registra las dos actas de cada mesa asignada
@@ -16,10 +16,17 @@ pantalla de **corrección** (RF-12) queda pendiente — ver abajo.
   `EvaluarNitidezFoto.ts` para el umbral calibrado y por qué.
 - S-10: la ubicación se marca `verificada: false` si pasaron más de 5
   minutos entre capturarla y guardar el acta.
+- RF-12: *"el veedor corrige sus mesas y el coordinador de recinto corrige
+  cualquier acta de su recinto"* — `CorregirActasScreen` sirve a ambos roles
+  con la MISMA consulta (`listarActasCorregibles`, sin filtro en el
+  cliente): la RLS de `actas` (`actas_select_alcance`) ya decide qué le toca
+  ver a cada uno. Duplicar ese filtro en el cliente habría sido confiar dos
+  veces en la misma regla y arriesgarse a que se desalineen.
 - S-05: `CorregirActaUseCase`/`SupabaseActasDatasource.corregir` implementan
-  concurrencia optimista completa (domain + RLS), devolviendo
-  `CONFLICTO_VERSION` con la versión del servidor si alguien más ya corrigió
-  el acta — falta la pantalla que consuma esto (ver abajo).
+  concurrencia optimista completa (domain + RLS): si alguien más ya corrigió
+  el acta, `CorregirActasScreen` muestra la versión del servidor
+  (`ConflictoVersion.versionServidor`) con un botón para cargarla y decidir
+  desde ahí, en vez de sobreescribir en silencio.
 - RF-13: `ListaPendientes` en `RegistrarActaScreen` usa `<StatusBadge>` para
   que el estado de cada acta (en proceso/guardado/fallido) esté siempre
   visible, nunca un Alert genérico.
@@ -35,15 +42,11 @@ teléfono antes de la defensa** (el valor actual es un punto de partida
 razonable, no una medición tuya).
 
 ## Qué falta construir
-1. **Pantalla de corrección (RF-12)**: para el coordinador de recinto (y el
-   propio veedor). El dominio y los datos ya están listos
-   (`CorregirActaUseCase`, `ActasRepository.corregir`) — falta la UI que
-   liste las actas de un recinto, permita editar los campos y muestre
-   `ConflictoVersion.versionServidor` si hay un conflicto.
-2. **Alerta de demora (S-06)**: avisar si el veedor tarda demasiado en
+1. **Alerta de demora (S-06)**: avisar si el veedor tarda demasiado en
    registrar tras cerrar la votación — no implementado.
-3. Conectar `actas` con `seguimiento` (RF-16: el panel del provincial
-   necesita leer estas filas agregadas por recinto/candidato).
+2. La lista de `CorregirActasScreen` no pide la URL firmada de la foto (para
+   no gastar una llamada a Storage por fila) — si en algún momento se quiere
+   mostrar la foto original al corregir, hay que agregarla ahí.
 
 ## Tabla y Storage en Supabase (`0005_actas.sql`)
 - `actas`: `id` lo genera el dispositivo (RF-13: duplicados se detectan por

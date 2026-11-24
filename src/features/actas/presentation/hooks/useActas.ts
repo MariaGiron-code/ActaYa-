@@ -7,11 +7,20 @@ import { CorregirActaInput } from '../../domain/use-cases/CorregirActaUseCase';
 import { Acta } from '../../domain/entities/Acta';
 
 const CLAVE_PENDIENTES = ['actas', 'pendientes'];
+const CLAVE_CORREGIBLES = ['actas', 'corregibles'];
 
 export function useActasPendientes() {
   return useQuery({
     queryKey: CLAVE_PENDIENTES,
     queryFn: () => actasContainer.actasRepository.listarPendientesDeEnvio(),
+  });
+}
+
+/** RF-12: la RLS de `actas` ya filtra "sus mesas" (veedor) o "su recinto" (coordinador). */
+export function useActasCorregibles() {
+  return useQuery({
+    queryKey: CLAVE_CORREGIBLES,
+    queryFn: () => actasContainer.actasRepository.listarActasCorregibles(),
   });
 }
 
@@ -39,7 +48,10 @@ export function useCorregirActa() {
     mutationFn: ({ actaId, cambios, actaActual }: { actaId: string; cambios: CorregirActaInput; actaActual: Acta }) =>
       actasContainer.corregirActaUseCase.ejecutar(actaId, cambios, actaActual),
     onSuccess: (resultado) => {
-      if (resultado.ok) queryClient.invalidateQueries({ queryKey: CLAVE_PENDIENTES });
+      if (resultado.ok) {
+        queryClient.invalidateQueries({ queryKey: CLAVE_PENDIENTES });
+        queryClient.invalidateQueries({ queryKey: CLAVE_CORREGIBLES });
+      }
     },
   });
 }

@@ -12,6 +12,7 @@ export type RootStackParamList = {
   Recintos: undefined;
   Asignaciones: undefined;
   RegistrarActa: undefined;
+  CorregirActas: undefined;
   Seguimiento: undefined;
   CrearUsuario: { rolDeQuienCrea: RolUsuario; rolACrear: RolUsuario };
 };

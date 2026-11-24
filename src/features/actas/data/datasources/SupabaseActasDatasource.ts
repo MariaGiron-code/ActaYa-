@@ -74,6 +74,19 @@ export class SupabaseActasDatasource {
     return ok(actaFromRow(data, fotoUrl));
   }
 
+  async listarActasCorregibles(): Promise<Result<Acta[]>> {
+    const { data, error } = await this.client
+      .from('actas')
+      .select('*')
+      .order('creada_en', { ascending: false });
+
+    if (error) return fail({ code: 'ERROR_LISTAR_ACTAS', message: error.message, cause: error });
+    // Sin URL de foto: esta lista es para corregir votos, no para ver la
+    // imagen, y pedir una URL firmada por fila sería una llamada de más a
+    // Storage por cada acta sin necesidad.
+    return ok((data as ActaRow[]).map((fila) => actaFromRow(fila, '')));
+  }
+
   private async subirFoto(actaId: string, veedorId: string, uriLocal: string): Promise<Result<string>> {
     const ruta = `${veedorId}/${actaId}.jpg`;
     const respuesta = await fetch(uriLocal);

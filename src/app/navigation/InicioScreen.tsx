@@ -11,7 +11,7 @@ import type { RootStackParamList } from './types';
 
 const PENDIENTES_POR_ROL: Record<RolUsuario, string[]> = {
   [RolUsuario.COORDINADOR_PROVINCIAL]: [],
-  [RolUsuario.COORDINADOR_RECINTO]: ['Corregir actas de su recinto (RF-12) — feature "actas"'],
+  [RolUsuario.COORDINADOR_RECINTO]: [],
   [RolUsuario.VEEDOR]: [],
 };
 
@@ -55,6 +55,7 @@ export function InicioScreen() {
       {usuario.rol === RolUsuario.COORDINADOR_RECINTO ? (
         <>
           <Button label="Mis veedores" onPress={() => navigation.navigate('Asignaciones')} />
+          <Button label="Corregir actas" variant="outline" onPress={() => navigation.navigate('CorregirActas')} />
           <Button
             label="Crear veedor"
             variant="outline"
@@ -69,7 +70,10 @@ export function InicioScreen() {
       ) : null}
 
       {usuario.rol === RolUsuario.VEEDOR ? (
-        <Button label="Registrar actas" onPress={() => navigation.navigate('RegistrarActa')} />
+        <>
+          <Button label="Registrar actas" onPress={() => navigation.navigate('RegistrarActa')} />
+          <Button label="Corregir mis actas" variant="outline" onPress={() => navigation.navigate('CorregirActas')} />
+        </>
       ) : null}
 
       <View style={styles.lista}>

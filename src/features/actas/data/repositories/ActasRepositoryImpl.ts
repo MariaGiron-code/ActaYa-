@@ -29,4 +29,8 @@ export class ActasRepositoryImpl implements ActasRepository {
   ): Promise<Result<Acta, ConflictoVersion | AppError>> {
     return this.remoteDatasource.corregir(actaId, cambios, versionConocida);
   }
+
+  listarActasCorregibles(): Promise<Result<Acta[]>> {
+    return this.remoteDatasource.listarActasCorregibles();
+  }
 }
