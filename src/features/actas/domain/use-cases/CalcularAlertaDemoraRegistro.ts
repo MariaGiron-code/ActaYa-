@@ -8,10 +8,11 @@ export const HORA_CIERRE_VOTACION = { horas: 17, minutos: 0 };
 
 /**
  * Umbrales en minutos desde el cierre, solo si todavía faltan actas por
- * registrar. Punto de partida razonable, no una medición real — igual que
- * el umbral de nitidez, puedes ajustarlos si el equipo decide otros tiempos.
+ * registrar. Decisión del equipo tras probarlo en campo: 10 minutos de
+ * margen (antes 30) para que la advertencia salga apenas pasa un rato breve
+ * del cierre, no media hora después.
  */
-export const UMBRAL_ADVERTENCIA_MINUTOS = 30;
+export const UMBRAL_ADVERTENCIA_MINUTOS = 10;
 export const UMBRAL_CRITICO_MINUTOS = 90;
 
 export type NivelAlertaDemora = 'ninguna' | 'advertencia' | 'critica';
