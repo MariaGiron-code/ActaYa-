@@ -84,7 +84,15 @@ serve(async (req: Request) => {
       email_confirm: true, // ya se verificó entregabilidad arriba
     });
     if (errorAuth || !nuevoAuthUser.user) {
-      return json({ error: errorAuth?.message ?? 'No se pudo crear el usuario.' }, 500);
+      const yaRegistrado = /already.*registered|email.*exists/i.test(errorAuth?.message ?? '');
+      return json(
+        {
+          error: yaRegistrado
+            ? 'Ya existe una cuenta con ese correo electrónico.'
+            : (errorAuth?.message ?? 'No se pudo crear el usuario.'),
+        },
+        500
+      );
     }
 
     const { data: filaUsuario, error: errorInsert } = await admin
@@ -107,7 +115,20 @@ serve(async (req: Request) => {
       .single();
 
     if (errorInsert) {
-      return json({ error: errorInsert.message }, 500);
+      // El usuario de Auth ya se creó (arriba) pero el perfil no se pudo
+      // guardar (ej. cédula duplicada) — si se deja así queda una cuenta de
+      // Auth huérfana y ese correo/cédula ya no se podrá volver a usar para
+      // reintentar. Se revierte la creación de Auth para que el intento
+      // completo quede limpio.
+      await admin.auth.admin.deleteUser(nuevoAuthUser.user.id);
+
+      const esDuplicado = errorInsert.code === '23505';
+      const mensaje = esDuplicado
+        ? /cedula/i.test(errorInsert.message)
+          ? 'Ya existe una cuenta con esa cédula.'
+          : 'Ya existe una cuenta con ese correo electrónico.'
+        : errorInsert.message;
+      return json({ error: mensaje }, 500);
     }
 
     return json({ usuario: filaUsuario, claveTemporal });

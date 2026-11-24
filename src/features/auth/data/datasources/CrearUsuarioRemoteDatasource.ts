@@ -1,4 +1,4 @@
-import { SupabaseClient } from '@supabase/supabase-js';
+import { FunctionsHttpError, SupabaseClient } from '@supabase/supabase-js';
 import { fail, ok, Result } from '@core/utils/result';
 import { usuarioFromRow, UsuarioRow } from '../dto/UsuarioDTO';
 import { CrearUsuarioInput } from '../../domain/repositories/AuthRepository';
@@ -22,7 +22,19 @@ export class CrearUsuarioRemoteDatasource {
     }>('crear-usuario', { body: datos });
 
     if (error || !data) {
-      return fail({ code: 'ERROR_CREAR_USUARIO', message: error?.message ?? 'No se pudo crear el usuario.', cause: error });
+      // Supabase-js no expone el mensaje real del Edge Function en `error.message`
+      // (solo dice "non-2xx status code") — hay que leerlo del cuerpo de la
+      // respuesta HTTP que viene en `error.context`.
+      let mensaje = error?.message ?? 'No se pudo crear el usuario.';
+      if (error instanceof FunctionsHttpError) {
+        try {
+          const cuerpo = await error.context.json();
+          mensaje = cuerpo?.error ?? mensaje;
+        } catch {
+          // el cuerpo no era JSON; nos quedamos con el mensaje genérico
+        }
+      }
+      return fail({ code: 'ERROR_CREAR_USUARIO', message: mensaje, cause: error });
     }
 
     return ok({ usuario: usuarioFromRow(data.usuario), claveTemporal: data.claveTemporal });
