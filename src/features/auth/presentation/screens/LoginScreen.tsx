@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button, Screen, TextField } from '@core/ui';
+import { ActinMascot, AppIcon, Button, Screen, TextField } from '@core/ui';
 import { colors, spacing, typography } from '@core/theme';
 import { useIniciarSesion } from '../hooks/useAuth';
 
@@ -31,7 +31,15 @@ export function LoginScreen({ onIrARecuperar }: { onIrARecuperar: () => void }) 
 
   return (
     <Screen scrollable>
-      <Text style={styles.titulo}>ActaYa</Text>
+      <View style={styles.marca}>
+        <AppIcon size={28} />
+        <Text style={styles.titulo}>ActaYa</Text>
+      </View>
+
+      <View style={styles.mascota}>
+        <ActinMascot size={110} swayBody={false} tapPencil />
+      </View>
+
       <Text style={styles.subtitulo}>Control electoral en tiempo real</Text>
 
       <View style={styles.formulario}>
@@ -73,7 +81,15 @@ export function LoginScreen({ onIrARecuperar }: { onIrARecuperar: () => void }) 
 }
 
 const styles = StyleSheet.create({
-  titulo: { ...typography.h1, color: colors.primary, marginTop: spacing.xxl, textAlign: 'center' },
+  marca: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginTop: spacing.xxl,
+  },
+  titulo: { ...typography.h1, color: colors.primary },
+  mascota: { alignItems: 'center', marginTop: spacing.md },
   subtitulo: {
     ...typography.body,
     color: colors.textSecondary,

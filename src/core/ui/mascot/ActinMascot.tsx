@@ -12,29 +12,46 @@ import Animated, {
 import { palette, colors } from '@core/theme';
 
 const AnimatedRect = Animated.createAnimatedComponent(Rect);
+const AnimatedG = Animated.createAnimatedComponent(G);
+
+const PENCIL_ANGLE = -45;
+const PENCIL_PIVOT_X = 187;
+const PENCIL_PIVOT_Y = 150;
 
 type ActinMascotProps = {
   /** Ancho/alto del personaje en dp (es cuadrado). */
   size?: number;
-  /** Respiración y parpadeo en bucle. Desactívalo si luego lo reemplazas por un Lottie. */
+  /** Interruptor maestro: en false, el personaje queda completamente quieto. */
   animated?: boolean;
+  /** Respiración (escala + flotación) de todo el cuerpo. */
+  swayBody?: boolean;
+  /** Parpadeo de los ojos. */
+  blinkEyes?: boolean;
+  /** Pequeño vaivén del lápiz, como si estuviera escribiendo. */
+  tapPencil?: boolean;
 };
 
 /**
  * "Actín": mascota de ActaYa — un acta (documento de escrutinio) con cara,
  * que sostiene un lápiz y lleva un sello de verificación. Pensado como base
  * visual para convertirlo luego en un avatar animado (Lottie o Reanimated):
- * cada parte (ojos, párpados, brazos, sello) está en su propio <G>/elemento
- * para poder animarla por separado en vez de redibujar todo el SVG.
+ * cada parte (ojos, párpados, brazos, lápiz, sello) está en su propio
+ * <G>/elemento para poder animarla por separado en vez de redibujar todo el SVG.
  */
-export function ActinMascot({ size = 160, animated = true }: ActinMascotProps) {
-  const breath = useSharedValue(1);
+export function ActinMascot({
+  size = 160,
+  animated = true,
+  swayBody = true,
+  blinkEyes = true,
+  tapPencil = false,
+}: ActinMascotProps) {
+  const breath = useSharedValue(0);
   const blink = useSharedValue(0);
+  const pencilTilt = useSharedValue(PENCIL_ANGLE);
 
   useEffect(() => {
-    if (!animated) return;
+    if (!animated || !swayBody) return;
 
-    breath.value = 0;
     breath.value = withRepeat(
       withSequence(
         withTiming(1, { duration: 1400 }),
@@ -43,6 +60,10 @@ export function ActinMascot({ size = 160, animated = true }: ActinMascotProps) {
       -1,
       true,
     );
+  }, [animated, swayBody, breath]);
+
+  useEffect(() => {
+    if (!animated || !blinkEyes) return;
 
     blink.value = withRepeat(
       withSequence(
@@ -54,7 +75,22 @@ export function ActinMascot({ size = 160, animated = true }: ActinMascotProps) {
       -1,
       false,
     );
-  }, [animated, breath, blink]);
+  }, [animated, blinkEyes, blink]);
+
+  useEffect(() => {
+    if (!animated || !tapPencil) return;
+
+    pencilTilt.value = withRepeat(
+      withSequence(
+        withTiming(PENCIL_ANGLE, { duration: 900 }),
+        withTiming(PENCIL_ANGLE - 7, { duration: 160 }),
+        withTiming(PENCIL_ANGLE + 7, { duration: 160 }),
+        withTiming(PENCIL_ANGLE, { duration: 160 }),
+      ),
+      -1,
+      false,
+    );
+  }, [animated, tapPencil, pencilTilt]);
 
   const bodyStyle = useAnimatedStyle(() => ({
     transform: [{ scale: 1 + breath.value * 0.03 }, { translateY: -breath.value * 2 }],
@@ -62,9 +98,28 @@ export function ActinMascot({ size = 160, animated = true }: ActinMascotProps) {
 
   const eyelidProps = useAnimatedProps(() => ({ opacity: blink.value }));
 
+  // react-native-svg solo calcula la matriz de `rotation`/`origin` en el
+  // render de React; como Reanimated actualiza este prop sin pasar por ahí,
+  // hay que entregarle ya la matriz de rotación para que el giro se vea.
+  const pencilProps = useAnimatedProps(() => {
+    const rad = (pencilTilt.value * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    return {
+      matrix: [
+        cos,
+        sin,
+        -sin,
+        cos,
+        PENCIL_PIVOT_X - PENCIL_PIVOT_X * cos + PENCIL_PIVOT_Y * sin,
+        PENCIL_PIVOT_Y - PENCIL_PIVOT_X * sin - PENCIL_PIVOT_Y * cos,
+      ],
+    };
+  });
+
   return (
     <View style={[styles.container, { width: size, height: size }]}>
-      <Animated.View style={[styles.full, animated && bodyStyle]}>
+      <Animated.View style={[styles.full, animated && swayBody && bodyStyle]}>
         <Svg viewBox="0 0 200 220" width="100%" height="100%">
           {/* Cuerpo: el acta/documento */}
           <G>
@@ -112,11 +167,13 @@ export function ActinMascot({ size = 160, animated = true }: ActinMascotProps) {
             <Circle cx={187} cy={168} r={10} />
           </G>
 
-          {/* Lápiz en la mano derecha */}
-          <G transform="rotate(-45 187 150)">
+          {/* Lápiz en la mano derecha: `rotation` se anima con `pencilTilt` */}
+          {/* `animatedProps` con `matrix` no entra bien en los tipos de
+              AnimatedComponent de Reanimated; el valor en sí es válido. */}
+          <AnimatedG animatedProps={pencilProps as Partial<React.ComponentProps<typeof G>>}>
             <Rect x={181} y={122} width={12} height={34} rx={3} fill={palette.amarillo} />
             <Polygon points="181,122 193,122 187,110" fill={palette.negro} />
-          </G>
+          </AnimatedG>
 
           {/* Cara */}
           <G>
