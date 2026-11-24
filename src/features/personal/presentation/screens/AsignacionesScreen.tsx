@@ -145,6 +145,7 @@ function MesaRow({
       ) : (
         <FormularioVeedorNuevo
           asignacionActualId={asignacionActiva!.id}
+          reemplazarVeedor={reemplazarVeedor}
           onCancelar={() => setModoEdicion('ninguno')}
           onExito={() => setModoEdicion('ninguno')}
         />
@@ -162,15 +163,15 @@ function MesaRow({
 
 function FormularioVeedorNuevo({
   asignacionActualId,
+  reemplazarVeedor,
   onCancelar,
   onExito,
 }: {
   asignacionActualId: string;
+  reemplazarVeedor: ReturnType<typeof useReemplazarVeedor>;
   onCancelar: () => void;
   onExito: () => void;
 }) {
-  const usuario = useSessionStore((s) => s.usuario)!;
-  const reemplazarVeedor = useReemplazarVeedor(usuario.rol, usuario.recintoId);
   const { control, handleSubmit, formState } = useForm<FormNuevo>({
     resolver: zodResolver(esquemaNuevo),
     defaultValues: { cedula: '', nombres: '', apellidos: '', telefono: '', correo: '' },
@@ -245,6 +246,10 @@ function FormularioVeedorNuevo({
           />
         )}
       />
+      {reemplazarVeedor.data && !reemplazarVeedor.data.ok ? (
+        <Text style={styles.error}>{reemplazarVeedor.data.error.message}</Text>
+      ) : null}
+
       <Button label="Crear y reemplazar" onPress={onSubmit} loading={reemplazarVeedor.isPending} />
       <Button label="Cancelar" variant="outline" onPress={onCancelar} />
     </View>
