@@ -18,6 +18,7 @@
     "dayjs": "^1.11.23",
     "expo": "57.0.34",
     "expo-crypto": "~57.0.4",
+    "expo-dev-client": "~57.0.22",
     "expo-file-system": "~57.0.7",
     "expo-image-manipulator": "~57.0.23",
     "expo-image-picker": "~57.0.22",
