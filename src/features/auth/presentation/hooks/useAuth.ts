@@ -63,7 +63,9 @@ export function useEstablecerClaveInicial() {
   return useMutation({
     mutationFn: ({ nuevaClave, confirmacion }: { nuevaClave: string; confirmacion: string }) =>
       authContainer.establecerClaveInicialUseCase.ejecutar(nuevaClave, confirmacion),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['auth', 'sesion-actual'] }),
+    onSuccess: (resultado) => {
+      if (resultado.ok) queryClient.invalidateQueries({ queryKey: ['auth', 'sesion-actual'] });
+    },
   });
 }
 

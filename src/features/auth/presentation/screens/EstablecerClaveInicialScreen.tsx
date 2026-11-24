@@ -4,8 +4,8 @@ import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, Screen, TextField } from '@core/ui';
-import { spacing, typography } from '@core/theme';
-import { useEstablecerClaveInicial } from '../hooks/useAuth';
+import { colors, spacing, typography } from '@core/theme';
+import { useCerrarSesion, useEstablecerClaveInicial } from '../hooks/useAuth';
 
 const esquema = z
   .object({
@@ -29,10 +29,14 @@ export function EstablecerClaveInicialScreen() {
     defaultValues: { nuevaClave: '', confirmacion: '' },
   });
   const establecerClave = useEstablecerClaveInicial();
+  const cerrarSesion = useCerrarSesion();
 
   const onSubmit = handleSubmit(({ nuevaClave, confirmacion }) =>
     establecerClave.mutate({ nuevaClave, confirmacion })
   );
+
+  const errorDelServidor =
+    establecerClave.data && !establecerClave.data.ok ? establecerClave.data.error.message : null;
 
   return (
     <Screen scrollable>
@@ -68,7 +72,15 @@ export function EstablecerClaveInicialScreen() {
         )}
       />
 
+      {errorDelServidor ? <Text style={styles.errorServidor}>{errorDelServidor}</Text> : null}
+
       <Button label="Guardar clave" onPress={onSubmit} loading={establecerClave.isPending} />
+      <Button
+        label="Cancelar e iniciar sesión más tarde"
+        variant="outline"
+        onPress={() => cerrarSesion.mutate()}
+        loading={cerrarSesion.isPending}
+      />
     </Screen>
   );
 }
@@ -76,4 +88,5 @@ export function EstablecerClaveInicialScreen() {
 const styles = StyleSheet.create({
   titulo: { ...typography.h2, marginTop: spacing.lg },
   ayuda: { ...typography.body, marginBottom: spacing.lg },
+  errorServidor: { ...typography.body, color: colors.error, textAlign: 'center', marginBottom: spacing.sm },
 });
