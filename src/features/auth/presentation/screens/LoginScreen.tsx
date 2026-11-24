@@ -30,7 +30,7 @@ export function LoginScreen({ onIrARecuperar }: { onIrARecuperar: () => void }) 
   const errorDelServidor = iniciarSesion.data && !iniciarSesion.data.ok ? iniciarSesion.data.error.message : null;
 
   return (
-    <Screen>
+    <Screen scrollable>
       <Text style={styles.titulo}>ActaYa</Text>
       <Text style={styles.subtitulo}>Control electoral en tiempo real</Text>
 

@@ -35,7 +35,7 @@ export function EstablecerClaveInicialScreen() {
   );
 
   return (
-    <Screen>
+    <Screen scrollable>
       <Text style={styles.titulo}>Crea tu clave personal</Text>
       <Text style={styles.ayuda}>
         A partir de ahora, nadie más que tú conocerá esta clave.

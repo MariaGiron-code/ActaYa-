@@ -64,6 +64,7 @@ export function AsignacionesScreen() {
         />
       ) : (
         <FlatList
+          style={styles.flatList}
           data={mesas.data?.ok ? mesas.data.value : []}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
@@ -252,6 +253,7 @@ function FormularioVeedorNuevo({
 
 const styles = StyleSheet.create({
   titulo: { ...typography.h1, color: colors.primary, marginBottom: spacing.md },
+  flatList: { flex: 1 },
   lista: { gap: spacing.sm, paddingBottom: spacing.lg },
   vacio: { ...typography.body, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.md },
   card: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.md, gap: spacing.xs },

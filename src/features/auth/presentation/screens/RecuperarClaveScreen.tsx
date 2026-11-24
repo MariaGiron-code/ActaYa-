@@ -25,7 +25,7 @@ export function RecuperarClaveScreen({ onVolver }: { onVolver: () => void }) {
 
   if (enviado) {
     return (
-      <Screen>
+      <Screen scrollable>
         <Text style={styles.titulo}>Revisa tu correo</Text>
         <Text style={styles.ayuda}>Te enviamos un enlace para crear una nueva clave.</Text>
         <Button label="Volver al inicio" variant="outline" onPress={onVolver} />
@@ -34,7 +34,7 @@ export function RecuperarClaveScreen({ onVolver }: { onVolver: () => void }) {
   }
 
   return (
-    <Screen>
+    <Screen scrollable>
       <Text style={styles.titulo}>Recuperar acceso</Text>
       <Controller
         control={control}

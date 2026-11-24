@@ -66,7 +66,7 @@ export function CrearUsuarioScreen({ rolDeQuienCrea, rolACrear }: Props) {
 
   if (claveTemporal) {
     return (
-      <Screen>
+      <Screen scrollable>
         <Text style={styles.titulo}>Cuenta creada</Text>
         <Text style={styles.ayuda}>
           Entrega esta clave temporal a la persona. Solo se mostrará esta vez (S-11):
@@ -78,7 +78,7 @@ export function CrearUsuarioScreen({ rolDeQuienCrea, rolACrear }: Props) {
   }
 
   return (
-    <Screen>
+    <Screen scrollable>
       <Text style={styles.titulo}>Registrar persona</Text>
 
       <Controller
