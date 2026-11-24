@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Button, Screen } from '@core/ui';
+import { ActinMascot, Button, Screen } from '@core/ui';
 import { colors, spacing, typography } from '@core/theme';
 import { RolUsuario } from '@features/auth/domain/entities/Usuario';
 import { useSessionStore } from '@features/auth/presentation/store/useSessionStore';
@@ -31,6 +31,9 @@ export function InicioScreen() {
 
   return (
     <Screen scrollable>
+      <View style={styles.mascota}>
+        <ActinMascot size={120} />
+      </View>
       <Text style={styles.saludo}>Hola, {usuario.nombres}</Text>
       <Text style={styles.rol}>{usuario.rol.replace('_', ' ')}</Text>
 
@@ -85,6 +88,7 @@ export function InicioScreen() {
 }
 
 const styles = StyleSheet.create({
+  mascota: { alignItems: 'center', marginTop: spacing.sm },
   saludo: { ...typography.h1, marginTop: spacing.lg },
   rol: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.xl },
   subtitulo: { ...typography.h3, marginBottom: spacing.sm },
