@@ -3,11 +3,23 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "@app/*": ["./src/app/*"],
-      "@core/*": ["./src/core/*"],
-      "@features/*": ["./src/features/*"]
+      "@app/*": [
+        "./src/app/*"
+      ],
+      "@core/*": [
+        "./src/core/*"
+      ],
+      "@features/*": [
+        "./src/features/*"
+      ]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
-  "exclude": ["node_modules", "supabase"]
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "supabase"
+  ]
 }

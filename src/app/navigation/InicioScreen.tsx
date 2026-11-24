@@ -1,14 +1,16 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Button, Screen } from '@core/ui';
 import { colors, spacing, typography } from '@core/theme';
 import { RolUsuario } from '@features/auth/domain/entities/Usuario';
 import { useSessionStore } from '@features/auth/presentation/store/useSessionStore';
 import { useCerrarSesion } from '@features/auth/presentation/hooks/useAuth';
+import type { RootStackParamList } from './types';
 
 const PENDIENTES_POR_ROL: Record<RolUsuario, string[]> = {
   [RolUsuario.COORDINADOR_PROVINCIAL]: [
-    'Gestión de recintos (RF-06) — feature "territorio"',
     'Panel de seguimiento en tiempo real (RF-16) — feature "seguimiento"',
   ],
   [RolUsuario.COORDINADOR_RECINTO]: [
@@ -26,6 +28,7 @@ const PENDIENTES_POR_ROL: Record<RolUsuario, string[]> = {
 export function InicioScreen() {
   const usuario = useSessionStore((s) => s.usuario);
   const cerrarSesion = useCerrarSesion();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   if (!usuario) return null;
 
@@ -33,6 +36,10 @@ export function InicioScreen() {
     <Screen>
       <Text style={styles.saludo}>Hola, {usuario.nombres}</Text>
       <Text style={styles.rol}>{usuario.rol.replace('_', ' ')}</Text>
+
+      {usuario.rol === RolUsuario.COORDINADOR_PROVINCIAL ? (
+        <Button label="Ver recintos" onPress={() => navigation.navigate('Recintos')} />
+      ) : null}
 
       <View style={styles.lista}>
         <Text style={styles.subtitulo}>Por construir para tu rol:</Text>

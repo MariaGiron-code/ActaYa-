@@ -1,13 +1,15 @@
 import { Result } from '@core/utils/result';
-import { Candidato, OrganizacionPolitica, Recinto } from '../entities/Territorio';
+import { Candidato, Mesa, OrganizacionPolitica, Recinto } from '../entities/Territorio';
 
 /**
- * Puerto pendiente de implementar (ver README.md de este feature).
  * RF-06: el coordinador provincial visualiza los recintos precargados y
- * puede agregar nuevos.
+ * puede agregar nuevos. `listarMesasPorRecinto` expone las JRV precargadas
+ * (S-01) — la consumen `personal` (asignar veedor a una JRV) y `actas`
+ * (registrar el acta de una JRV concreta).
  */
 export interface TerritorioRepository {
   listarRecintos(): Promise<Result<Recinto[]>>;
   agregarRecinto(datos: Omit<Recinto, 'id'>): Promise<Result<Recinto>>;
+  listarMesasPorRecinto(recintoId: string): Promise<Result<Mesa[]>>;
   listarOrganizacionesConCandidatos(): Promise<Result<{ organizacion: OrganizacionPolitica; candidatos: Candidato[] }[]>>;
 }

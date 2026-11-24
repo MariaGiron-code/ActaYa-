@@ -44,8 +44,8 @@
       [
         "@sentry/react-native/expo",
         {
-          "organization": "TU_ORGANIZACION_SENTRY",
-          "project": "actaya"
+          "organization": "epn-gy",
+          "project": "acta-ya"
         }
       ],
       [

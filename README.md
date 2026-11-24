@@ -57,7 +57,7 @@ src/
   core/            # transversal: theme, supabase client, storage, validación, UI compartida
   features/
     auth/          # COMPLETO — patrón de referencia (domain/data/presentation/di)
-    territorio/    # domain listo, falta data/presentation (ver su README.md)
+    territorio/    # COMPLETO — recintos/JRV/organizaciones precargados (ver su README.md: verifica los datos antes de defender)
     personal/      # domain listo, falta data/presentation (ver su README.md)
     actas/         # domain listo (incluye ValidarActaUseCase funcionando), falta resto
     seguimiento/    # domain listo, falta data/presentation (ver su README.md)
@@ -143,8 +143,10 @@ npm run format       # Prettier
 
 ## Qué sigue
 
-Completa `territorio`, `personal`, `actas` y `seguimiento` siguiendo el patrón de
-`features/auth`. Cada carpeta tiene su propio `README.md` con los RF/ADR que
-resuelve y los pasos sugeridos. Empieza por `actas` (vale más en la rúbrica) y por
-precargar el territorio/organizaciones en `supabase/migrations/` (restricción
-obligatoria del examen).
+Completa `personal`, `actas` y `seguimiento` siguiendo el patrón de
+`features/auth` y `features/territorio`. Cada carpeta tiene su propio
+`README.md` con los RF/ADR que resuelve y los pasos sugeridos. Empieza por
+`actas` (vale más en la rúbrica) — ya tiene recintos/JRV/candidatos reales
+precargados para trabajar contra datos reales, no de prueba. Antes de la
+defensa, revisa la advertencia de `features/territorio/README.md` sobre los
+datos del seed (número de JRV y candidatos pendientes de verificación final).

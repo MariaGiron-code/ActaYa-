@@ -6,4 +6,5 @@ export type AuthStackParamList = {
 export type RootStackParamList = {
   EstablecerClaveInicial: undefined;
   Inicio: undefined;
+  Recintos: undefined;
 };

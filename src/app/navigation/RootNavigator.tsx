@@ -7,6 +7,7 @@ import { useSesionActual } from '@features/auth/presentation/hooks/useAuth';
 import { LoginScreen } from '@features/auth/presentation/screens/LoginScreen';
 import { RecuperarClaveScreen } from '@features/auth/presentation/screens/RecuperarClaveScreen';
 import { EstablecerClaveInicialScreen } from '@features/auth/presentation/screens/EstablecerClaveInicialScreen';
+import { RecintosScreen } from '@features/territorio/presentation/screens/RecintosScreen';
 import { InicioScreen } from './InicioScreen';
 
 const Stack = createNativeStackNavigator();
@@ -50,7 +51,14 @@ export function RootNavigator() {
         ) : usuario.debeCambiarClave ? (
           <Stack.Screen name="EstablecerClaveInicial" component={EstablecerClaveInicialScreen} />
         ) : (
-          <Stack.Screen name="Inicio" component={InicioScreen} />
+          <>
+            <Stack.Screen name="Inicio" component={InicioScreen} />
+            <Stack.Screen
+              name="Recintos"
+              component={RecintosScreen}
+              options={{ headerShown: true, title: 'Recintos' }}
+            />
+          </>
         )}
       </Stack.Navigator>
     </NavigationContainer>
