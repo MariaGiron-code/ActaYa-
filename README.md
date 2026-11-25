@@ -1,5 +1,7 @@
 # ActaYa
 
+<img width="1024" height="1024" alt="image" src="https://github.com/user-attachments/assets/0636f35f-8ee4-4e7d-8c66-a4842dc15368" />
+
 Aplicación móvil de control electoral para organizaciones políticas. Permite registrar las
 actas de escrutinio de cada Junta Receptora del Voto (JRV) con foto y ubicación, organizar
 al personal en territorio y seguir el conteo de votos en tiempo real.
