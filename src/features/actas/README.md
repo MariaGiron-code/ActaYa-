@@ -1,73 +1,80 @@
-# Feature: actas
+# Actas
 
-**Estado:** completo (domain + data + di + presentation — registro y
-corrección).
+Permite al veedor registrar las actas de escrutinio de sus mesas y, al veedor o al
+coordinador de recinto, corregirlas después.
 
-## Qué resuelve
-- RF-09/RF-13/RF-14: el veedor registra las dos actas de cada mesa asignada
-  (alcaldía y prefectura), siempre guardando primero en local (RNF-05,
-  `RegistrarActaUseCase`) y sincronizando solo cuando hay conexión
-  (`SincronizarActasPendientesUseCase`, disparado por
-  `useSincronizarActasAlVolverOnline` — sin polling activo).
-- RF-10: `ValidarActaUseCase` (ya existía) revalida en cada registro y
-  corrección.
-- RF-11/ADR-04/ADR-06: foto obligatoria (`CapturarFotoActaUseCase`), con
-  rechazo de fotos borrosas — ver `EvaluarNitidezFoto.ts` para el umbral
-  calibrado y por qué.
-- ADR-04/S-10, ubicación en tres estados (`TarjetaUbicacion`):
-  - **Verificada**: posición nueva del GPS.
-  - **No verificada**: el GPS no respondió en 15 s y se usó la última
-    ubicación conocida, con más de 5 minutos.
-  - **Sin ubicación**: GPS apagado o permiso negado. La foto NO se
-    descarta y el acta se guarda igual (perderla sería peor, RNF-05), con
-    `ubicacion: null` / `ubicacion_verificada = false`. Se ve en rojo en
-    Corregir actas y en el aviso del panel de seguimiento, y se respalda
-    después con "Volver a tomar foto y ubicación" al corregir.
-- RNF-05: tomar la foto, leer el GPS y guardar el acta usan
-  `networkMode: 'always'` (`useActas.ts`). Sin eso, TanStack Query pausaba
-  esas acciones locales mientras no había señal.
-- RF-12: *"el veedor corrige sus mesas y el coordinador de recinto corrige
-  cualquier acta de su recinto"* — `CorregirActasScreen` sirve a ambos roles
-  con la MISMA consulta (`listarActasCorregibles`, sin filtro en el
-  cliente): la RLS de `actas` (`actas_select_alcance`) ya decide qué le toca
-  ver a cada uno. Duplicar ese filtro en el cliente habría sido confiar dos
-  veces en la misma regla y arriesgarse a que se desalineen.
-- S-05: `CorregirActaUseCase`/`SupabaseActasDatasource.corregir` implementan
-  concurrencia optimista completa (domain + RLS): si alguien más ya corrigió
-  el acta, `CorregirActasScreen` muestra la versión del servidor
-  (`ConflictoVersion.versionServidor`) con un botón para cargarla y decidir
-  desde ahí, en vez de sobreescribir en silencio.
-- RF-13: `ListaPendientes` en `RegistrarActaScreen` usa `<StatusBadge>` para
-  que el estado de cada acta (en proceso/guardado/fallido) esté siempre
-  visible, nunca un Alert genérico.
-- S-06: `CalcularAlertaDemoraRegistro.ts` compara la hora actual contra la
-  hora de cierre de votación (17:00, CNE) y cuántas actas le faltan al
-  veedor (mesas asignadas x 2, contra lo guardado LOCALMENTE — funciona sin
-  señal). `RegistrarActaScreen` muestra un banner amarillo (advertencia) o
-  rojo (crítico) según cuánto tiempo pasó — **verifica/calibra los
-  umbrales y la hora de cierre contra el cronograma oficial antes de la
-  defensa**, igual que el umbral de nitidez de abajo.
+## ADRs que aplica
 
-## Decisión técnica: nitidez de foto (ADR-06)
-`expo-image-manipulator` en SDK 57 **no da acceso a píxeles crudos**: solo
-transforma y guarda archivos. Por eso `DeviceCapturaDatasource.medirNitidez`
-redimensiona la foto a 512px de ancho, la guarda como JPEG en base64, la
-decodifica con `jpeg-js` (ya en el ADR) y calcula la varianza del laplaciano
-en escala de grises. El umbral (100) está documentado y razonado en
-`EvaluarNitidezFoto.ts` — **debes recalibrarlo con fotos reales de tu propio
-teléfono antes de la defensa** (el valor actual es un punto de partida
-razonable, no una medición tuya).
+| ADR    | Cómo se usa aquí                                                                               |
+| ------ | ---------------------------------------------------------------------------------------------- |
+| ADR-01 | Las actas se guardan en la tabla `actas` y las fotos en el bucket `actas-fotos` de Supabase.   |
+| ADR-02 | Las actas pendientes se guardan en AsyncStorage y la foto en el teléfono con expo-file-system. |
+| ADR-03 | Los errores al enviar o corregir un acta se reportan a Sentry.                                 |
+| ADR-04 | La foto se toma con expo-image-picker y la ubicación con expo-location.                        |
+| ADR-05 | Con NetInfo se detecta cuándo vuelve la señal para enviar las actas pendientes.                |
+| ADR-06 | Se mide la nitidez de la foto con expo-image-manipulator y jpeg-js.                            |
+| ADR-08 | TanStack Query maneja el guardado, el envío y la lista de actas.                               |
 
-## Qué falta construir
-1. La lista de `CorregirActasScreen` no pide la URL firmada de la foto (para
-   no gastar una llamada a Storage por fila) — si en algún momento se quiere
-   mostrar la foto original al corregir, hay que agregarla ahí.
+## Qué se implementa
 
-## Tabla y Storage en Supabase (`0005_actas.sql`)
-- `actas`: `id` lo genera el dispositivo (RF-13: duplicados se detectan por
-  violación de llave primaria, no se crean de nuevo). `unique(mesa_id, dignidad)`
-  impone una sola acta por mesa y dignidad. RLS: el veedor inserta solo en
-  mesas con una `asignaciones_veedor` activa a su nombre; lee/corrige según
-  alcance (RF-15).
-- Bucket privado `actas-fotos`, ruta `{veedorId}/{actaId}.jpg`; políticas de
-  Storage replican el mismo alcance que la tabla.
+**Registrar un acta**
+
+1. El veedor elige la mesa y la dignidad (alcaldía o prefectura).
+2. Ingresa los votos de cada organización, los nulos, los blancos y el total de sufragantes.
+   La app comprueba que las cuentas cuadren.
+3. Toma la foto del acta. Si sale borrosa, se rechaza y debe repetirla.
+4. Junto con la foto se guarda la ubicación.
+5. El acta se guarda **primero en el teléfono** y luego se envía al servidor.
+
+**Sin internet**
+
+- Tomar la foto y guardar el acta funcionan sin conexión.
+- El acta queda como "Esperando señal" y se envía sola cuando vuelve la conexión.
+- Cada acta tiene un identificador creado en el teléfono, así que reenviarla nunca crea un
+  duplicado.
+
+**Ubicación del acta**
+
+| Estado                   | Cuándo pasa                                                         |
+| ------------------------ | ------------------------------------------------------------------- |
+| Verificada (verde)       | El GPS dio una posición actual.                                     |
+| No verificada (amarillo) | El GPS no respondió y se usó la última ubicación conocida.          |
+| Sin ubicación (rojo)     | El GPS estaba apagado o no se dio permiso. El acta se guarda igual. |
+
+Las actas no verificadas o sin ubicación se marcan para que el coordinador las revise.
+
+**Corregir un acta**
+
+- El veedor ve sus actas y el coordinador de recinto ve todas las de su recinto.
+- Se pueden cambiar los votos y volver a tomar la foto con su ubicación.
+- Si otra persona corrigió la misma acta antes, la app avisa y muestra la versión más
+  reciente en lugar de sobrescribirla.
+- Corregir necesita conexión a internet.
+
+**Aviso de demora**
+
+Después del cierre de la votación (17:00), si al veedor le faltan actas por registrar
+aparece un aviso amarillo a los 10 minutos y rojo a los 90.
+
+## Archivos principales
+
+| Archivo                                                 | Qué hace                                                |
+| ------------------------------------------------------- | ------------------------------------------------------- |
+| `domain/use-cases/RegistrarActaUseCase.ts`              | Valida y guarda el acta en el teléfono.                 |
+| `domain/use-cases/SincronizarActasPendientesUseCase.ts` | Envía las actas pendientes al servidor.                 |
+| `domain/use-cases/CapturarFotoActaUseCase.ts`           | Toma la foto, revisa su nitidez y obtiene la ubicación. |
+| `domain/use-cases/CorregirActaUseCase.ts`               | Corrige un acta y detecta si alguien la cambió antes.   |
+| `domain/use-cases/ValidarActaUseCase.ts`                | Comprueba que los votos cuadren.                        |
+| `domain/use-cases/EvaluarNitidezFoto.ts`                | Define el nivel mínimo de nitidez (150).                |
+| `domain/use-cases/CalcularAlertaDemoraRegistro.ts`      | Calcula el aviso de demora.                             |
+| `presentation/screens/RegistrarActaScreen.tsx`          | Pantalla para registrar actas.                          |
+| `presentation/screens/CorregirActasScreen.tsx`          | Pantalla para corregir actas.                           |
+
+## Base de datos
+
+Migración `supabase/migrations/0005_actas.sql`:
+
+- Tabla `actas`: una sola acta por mesa y dignidad.
+- Bucket privado `actas-fotos`: cada usuario sube las fotos en su propia carpeta.
+- Reglas de acceso (RLS): el veedor solo registra en las mesas que tiene asignadas y cada
+  usuario solo ve y corrige las actas de su alcance.

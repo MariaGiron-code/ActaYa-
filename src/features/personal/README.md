@@ -1,36 +1,42 @@
-# Feature: personal
+# Personal
 
-**Estado:** completo (domain + data + presentation + di).
+Permite al coordinador de recinto asignar un veedor a cada mesa y reemplazarlo si no se
+presenta el día de la elección.
 
-## Qué resuelve
-- RF-07: el coordinador de recinto asigna un veedor a cada mesa de su recinto.
-- RF-08 / S-03: reemplazo de un veedor ausente el mismo día, con un veedor
-  existente o con una persona externa que se da de alta en el momento
-  (`ReemplazarVeedorUseCase` reutiliza `authContainer.crearUsuarioUseCase` —
-  la verificación real de cédula/correo no se relaja por ser urgente).
-- Confidencialidad (RF-15): un coordinador de recinto solo ve/edita las
-  asignaciones de SU recinto; el coordinador provincial las ve todas.
-  Reforzado con RLS en `supabase/migrations/0004_personal.sql`, no solo en
-  el cliente.
+## ADRs que aplica
 
-## Pieza que faltaba y se agregó
-El esquema original (`0001_usuarios.sql`) no tenía forma de saber qué
-recinto coordina un `COORDINADOR_RECINTO` — necesario para la RLS de arriba
-y para que la pantalla sepa qué mesas mostrarle. Se agregó:
-- Columna `usuarios.recinto_id` (migración `0004_personal.sql`).
-- Campo `recintoId` en `CrearUsuarioInput`/`Usuario` (feature `auth`) y un
-  selector de recinto en `CrearUsuarioScreen` cuando se crea un
-  `COORDINADOR_RECINTO`.
-- `AuthRepository.listarSubordinados()` (antes no expuesto, aunque la RLS
-  `usuarios_select_subordinados` ya lo permitía desde 0001) — lo usa esta
-  pantalla para ofrecer "elegir veedor existente".
+| ADR    | Cómo se usa aquí                                                           |
+| ------ | -------------------------------------------------------------------------- |
+| ADR-01 | Las asignaciones se guardan en la tabla `asignaciones_veedor` de Supabase. |
+| ADR-08 | TanStack Query carga y actualiza la lista de asignaciones.                 |
+| ADR-09 | El formulario de la persona nueva usa React Hook Form y Zod.               |
+| ADR-11 | Al registrar a una persona nueva se verifican su cédula y su correo.       |
 
-## Qué se construyó
-- `data/dto/AsignacionVeedorDTO.ts`, `data/datasources/SupabasePersonalDatasource.ts`, `data/repositories/PersonalRepositoryImpl.ts`.
-- `domain/use-cases/AsignarVeedorUseCase.ts` (RF-07) y `ReemplazarVeedorUseCase.ts` (RF-08/S-03, con rama "veedor existente" y rama "persona nueva").
-- `presentation/hooks/usePersonal.ts` + `presentation/screens/AsignacionesScreen.tsx`.
-- `di/personalContainer.ts` — reutiliza `authContainer.crearUsuarioUseCase` en vez de duplicarlo.
-- Registrado en `src/app/navigation/RootNavigator.tsx` (rutas `Asignaciones` y `CrearUsuario`), con botones desde `InicioScreen` para `COORDINADOR_PROVINCIAL` (crear coordinador de recinto) y `COORDINADOR_RECINTO` (ver "Mis veedores" / crear veedor).
+## Qué se implementa
 
-## Qué falta (fuera del alcance de este feature)
-- `AsignacionVeedor` no se consulta todavía desde `actas` (quién registra cada acta) ni desde `seguimiento` (RF-16 necesita saber cuántas mesas tienen veedor asignado).
+- **Asignar veedor:** el coordinador ve las mesas de su recinto y elige un veedor para cada
+  una.
+- **Reemplazar veedor:** si el veedor no llega, se puede poner en su lugar:
+  - un veedor que ya existe, o
+  - una persona nueva, que se registra en el momento con las mismas verificaciones que
+    cualquier usuario.
+- **Confidencialidad:** el coordinador de recinto solo ve las mesas de su recinto. El
+  coordinador provincial ve todas.
+
+## Archivos principales
+
+| Archivo                                       | Qué hace                                                        |
+| --------------------------------------------- | --------------------------------------------------------------- |
+| `domain/use-cases/AsignarVeedorUseCase.ts`    | Asigna un veedor a una mesa.                                    |
+| `domain/use-cases/ReemplazarVeedorUseCase.ts` | Reemplaza al veedor con uno existente o con una persona nueva.  |
+| `presentation/screens/AsignacionesScreen.tsx` | Pantalla "Mis veedores".                                        |
+| `di/personalContainer.ts`                     | Reutiliza la creación de usuarios de `auth` para no duplicarla. |
+
+## Base de datos
+
+Migración `supabase/migrations/0004_personal.sql`:
+
+- Tabla `asignaciones_veedor`: qué veedor cubre cada mesa.
+- Columna `usuarios.recinto_id`: el recinto que coordina cada coordinador de recinto.
+- Reglas de acceso (RLS): cada coordinador solo ve y modifica las asignaciones de su
+  recinto.

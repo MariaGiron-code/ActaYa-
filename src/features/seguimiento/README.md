@@ -1,45 +1,42 @@
-# Feature: seguimiento
+# Seguimiento
 
-**Estado:** completo (domain + data + di + presentation).
+Panel para el coordinador provincial: muestra en tiempo real cuántas mesas han reportado y
+cuántos votos lleva cada candidato.
 
-## Qué resuelve
-- RF-16: el coordinador provincial ve, por recinto, cuántas mesas han
-  reportado (ambas actas, alcaldía y prefectura, con foto y ubicación —
-  S-02) frente al total, y el conteo acumulado de votos por candidato para
-  cada dignidad — como un exit poll propio, sin esperar al CNE.
-- RNF-07: la pantalla se actualiza sola al llegar una acta nueva, vía
-  Supabase Realtime (ADR-10) — nunca por polling activo.
-- RF-17 / S-15: tal como decidió el equipo, no hay pantalla de estabilidad
-  aparte — el coordinador provincial revisa los fallos directamente en el
-  dashboard de Sentry.
+## ADRs que aplica
 
-## Pieza que faltaba y se agregó
-`mesas.estado` se diseñó desde `0002_territorio.sql` para marcarse
-`'completa'` cuando llegan las dos actas de una mesa (S-02), pero nada lo
-actualizaba — al construir `actas` nunca se conectó esa pieza. Se agregó un
-**trigger** (`actualizar_estado_mesa`, en `0007_seguimiento.sql`) que lo
-recalcula automáticamente después de cada `INSERT` en `actas`, contando
-`count(distinct dignidad) = 2` para esa mesa. Así nunca puede
-desincronizarse, sin importar por dónde se inserte la fila.
+| ADR    | Cómo se usa aquí                                                    |
+| ------ | ------------------------------------------------------------------- |
+| ADR-01 | Los totales se calculan con funciones SQL en Supabase.              |
+| ADR-03 | Los fallos de la app se revisan directamente en el panel de Sentry. |
+| ADR-07 | Los gráficos de barras usan react-native-gifted-charts.             |
+| ADR-08 | TanStack Query carga los datos del panel.                           |
+| ADR-10 | Supabase Realtime actualiza el panel cuando llega un acta nueva.    |
 
-## Qué se construyó
-- `supabase/migrations/0007_seguimiento.sql`:
-  - El trigger de arriba.
-  - `resumen_por_recinto()` y `progreso_por_dignidad(p_dignidad)`: funciones
-    SQL agregadas (no vistas, por si luego hace falta paginar o filtrar).
-  - `alter publication supabase_realtime add table public.actas` — sin
-    esto, un cliente puede suscribirse pero nunca le llega ningún evento.
-- `data/datasources/SupabaseSeguimientoDatasource.ts`: llama a las dos
-  funciones SQL vía `.rpc()`, y abre/cierra el canal de Realtime.
-- `presentation/hooks/useSeguimiento.ts`: `useSuscripcionSeguimiento` se
-  desuscribe automáticamente al desmontar la pantalla (consecuencia
-  documentada en ADR-10: sin esto hay fuga de conexión).
-- `presentation/screens/PanelSeguimientoScreen.tsx`: `react-native-gifted-charts`
-  (ADR-07) — barras por recinto (reportadas/total) y por candidato,
-  alternando entre alcaldía y prefectura.
-- Registrado en `src/app/navigation/RootNavigator.tsx` (ruta `Seguimiento`,
-  botón "Ver seguimiento" en `InicioScreen` para el coordinador provincial).
+## Qué se implementa
 
-## Qué falta (fuera del alcance de este feature)
-- Pantalla de corrección de actas (RF-12) — sigue pendiente, documentada en
-  `features/actas/README.md`.
+- **Mesas reportadas por recinto:** cuántas mesas ya enviaron sus dos actas (alcaldía y
+  prefectura) frente al total.
+- **Votos por candidato:** el conteo acumulado de cada dignidad, con un selector para pasar
+  de alcaldía a prefectura.
+- **Actualización en vivo:** cada acta nueva actualiza el panel al instante, sin recargar
+  ni consultar al servidor cada cierto tiempo.
+- **Aviso de ubicaciones:** lista las actas registradas con ubicación no verificada o sin
+  ubicación, para revisarlas.
+
+## Archivos principales
+
+| Archivo                                             | Qué hace                                                                    |
+| --------------------------------------------------- | --------------------------------------------------------------------------- |
+| `data/datasources/SupabaseSeguimientoDatasource.ts` | Consulta los totales y escucha los cambios en tiempo real.                  |
+| `presentation/hooks/useSeguimiento.ts`              | Carga los datos y se suscribe a Realtime mientras la pantalla está abierta. |
+| `presentation/screens/PanelSeguimientoScreen.tsx`   | Pantalla del panel con los gráficos.                                        |
+
+## Base de datos
+
+Migración `supabase/migrations/0007_seguimiento.sql`:
+
+- Trigger `actualizar_estado_mesa`: marca la mesa como completa cuando tiene sus dos actas.
+- Funciones `resumen_por_recinto()` y `progreso_por_dignidad()`: calculan los totales del
+  panel.
+- Activa Realtime en la tabla `actas`.

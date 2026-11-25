@@ -1,41 +1,36 @@
-# Feature: territorio
+# Territorio
 
-**Estado:** completo (domain + data + presentation + di), con precarga real
-aplicada en Supabase.
+Contiene los datos de la elección: recintos electorales, mesas (JRV) y organizaciones
+políticas con sus candidatos. Los demás módulos los usan para registrar actas y asignar
+veedores.
 
-## Qué resuelve
-- RF-06: el coordinador provincial ve los recintos precargados (jurisdicción:
-  parroquia Iñaquito, cantón Quito, provincia Pichincha) y puede agregar
-  nuevos desde `RecintosScreen`.
-- S-01 / S-17: recintos, JRV y las 5 organizaciones políticas con candidatos
-  a alcaldía y prefectura están precargados vía
-  `supabase/migrations/0002_territorio.sql` (esquema + RLS) y
-  `0003_territorio_seed.sql` (datos reales).
+## ADRs que aplica
 
-## ⚠️ Verifica antes de defender el examen
-El seed (`0003_territorio_seed.sql`) trae datos reales investigados en
-noviembre de 2026, pero con dos advertencias explícitas en el propio archivo:
+| ADR    | Cómo se usa aquí                                                                                    |
+| ------ | --------------------------------------------------------------------------------------------------- |
+| ADR-01 | Los datos se guardan en tablas de Supabase.                                                         |
+| ADR-08 | TanStack Query carga los recintos, mesas y candidatos y los guarda en caché para usarlos sin señal. |
+| ADR-09 | El formulario para agregar un recinto usa React Hook Form y Zod.                                    |
 
-1. **Número de JRV por recinto:** el CNE no lo publica en fuentes indexables;
-   los 3 JRV por recinto son un placeholder razonable, no un dato de prensa
-   verificado. Ajústalos con lo que veas en `lugarvotacion.cne.gob.ec`.
-2. **Candidatos:** son de calificaciones del CNE reportadas por prensa a
-   fines de septiembre de 2026. La elección es el 29-nov-2026 — verifica la
-   lista definitiva/papeleta oficial antes de defenderlo, especialmente los
-   números de lista que no se pudieron confirmar.
+## Qué se implementa
 
-## Qué se construyó
-- `data/dto/TerritorioDTO.ts` — mappers fila ↔ entidad para las 4 tablas.
-- `data/datasources/SupabaseTerritorioDatasource.ts` + `data/repositories/TerritorioRepositoryImpl.ts`.
-- `domain/use-cases/AgregarRecintoUseCase.ts` — exige `COORDINADOR_PROVINCIAL` (reforzado también por RLS en Supabase, no solo en el cliente).
-- `presentation/hooks/useTerritorio.ts` + `presentation/screens/RecintosScreen.tsx` — lista de recintos y formulario para agregar uno, con TanStack Query.
-- `di/territorioContainer.ts`.
-- Registrado en `src/app/navigation/RootNavigator.tsx` (ruta `Recintos`, accesible desde `InicioScreen` para el coordinador provincial).
+- **Datos precargados:** recintos de la parroquia Iñaquito (cantón Quito, provincia de
+  Pichincha), sus mesas y las organizaciones políticas con sus candidatos a alcaldía y
+  prefectura.
+- **Ver y agregar recintos:** el coordinador provincial ve la lista y puede agregar
+  recintos nuevos. Solo él tiene permiso para hacerlo.
 
-## Qué falta (fuera del alcance de este feature)
-- `listarMesasPorRecinto` ya existe en el repositorio, pero ninguna pantalla
-  la consume todavía — la usará `actas` (elegir JRV para registrar un acta) y
-  `personal` (asignar veedor a una JRV).
-- `listarOrganizacionesConCandidatos` ya existe en el repositorio, pero
-  ninguna pantalla la consume todavía — la usará `actas` (formulario de
-  conteo por candidato).
+## Archivos principales
+
+| Archivo                                       | Qué hace                                                      |
+| --------------------------------------------- | ------------------------------------------------------------- |
+| `domain/use-cases/AgregarRecintoUseCase.ts`   | Agrega un recinto; solo lo permite al coordinador provincial. |
+| `domain/repositories/TerritorioRepository.ts` | Lista recintos, mesas y organizaciones con candidatos.        |
+| `presentation/screens/RecintosScreen.tsx`     | Pantalla de recintos.                                         |
+
+## Base de datos
+
+- `supabase/migrations/0002_territorio.sql`: tablas `recintos`, `mesas`,
+  `organizaciones_politicas` y `candidatos`, con sus reglas de acceso (RLS).
+- `supabase/migrations/0003_territorio_seed.sql`: los datos precargados, con las fuentes de
+  donde se tomaron.
