@@ -35,6 +35,13 @@ export function useCapturarFotoActa() {
   });
 }
 
+/** ADR-04: vuelve a pedir solo la ubicación, sin repetir la foto. */
+export function useActualizarUbicacion() {
+  return useMutation({
+    mutationFn: () => actasContainer.capturaRepository.obtenerUbicacionActual(),
+  });
+}
+
 /** RF-09/RF-13: guarda SIEMPRE en local primero (offline-first). */
 export function useRegistrarActa() {
   const queryClient = useQueryClient();

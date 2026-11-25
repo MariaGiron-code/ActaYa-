@@ -4,12 +4,21 @@ import { Dignidad } from '@features/territorio/domain/entities/Territorio';
 import { seguimientoContainer } from '../../di/seguimientoContainer';
 
 const CLAVE_RESUMEN = ['seguimiento', 'resumen-recinto'];
+const CLAVE_UBICACIONES = ['seguimiento', 'ubicaciones-no-verificadas'];
 const claveProgreso = (dignidad: Dignidad) => ['seguimiento', 'progreso', dignidad];
 
 export function useResumenPorRecinto() {
   return useQuery({
     queryKey: CLAVE_RESUMEN,
     queryFn: () => seguimientoContainer.seguimientoRepository.obtenerResumenPorRecinto(),
+  });
+}
+
+/** ADR-04 / S-10: actas con la ubicación no verificada, para avisar al coordinador. */
+export function useActasUbicacionNoVerificada() {
+  return useQuery({
+    queryKey: CLAVE_UBICACIONES,
+    queryFn: () => seguimientoContainer.seguimientoRepository.listarActasUbicacionNoVerificada(),
   });
 }
 
@@ -31,6 +40,7 @@ export function useSuscripcionSeguimiento(dignidadActual: Dignidad) {
   useEffect(() => {
     const cancelar = seguimientoContainer.seguimientoRepository.suscribirseAActualizaciones(() => {
       queryClient.invalidateQueries({ queryKey: CLAVE_RESUMEN });
+      queryClient.invalidateQueries({ queryKey: CLAVE_UBICACIONES });
       queryClient.invalidateQueries({ queryKey: claveProgreso(dignidadActual) });
     });
     return cancelar;

@@ -9,15 +9,24 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { animaciones, FeedbackState, haptics, Screen, SegmentedControl } from '@core/ui';
+import { AlertBanner, animaciones, FeedbackState, haptics, Screen, SegmentedControl } from '@core/ui';
 import { colors, radius, spacing, typography } from '@core/theme';
 import { Dignidad } from '@features/territorio/domain/entities/Territorio';
-import { useProgresoPorDignidad, useResumenPorRecinto, useSuscripcionSeguimiento } from '../hooks/useSeguimiento';
+import { ActaUbicacionNoVerificada } from '../../domain/entities/Seguimiento';
+import {
+  useActasUbicacionNoVerificada,
+  useProgresoPorDignidad,
+  useResumenPorRecinto,
+  useSuscripcionSeguimiento,
+} from '../hooks/useSeguimiento';
 
 const DIGNIDADES: { valor: Dignidad; etiqueta: string }[] = [
   { valor: 'ALCALDIA', etiqueta: 'Alcaldía' },
   { valor: 'PREFECTURA', etiqueta: 'Prefectura' },
 ];
+
+/** Cuántas actas se listan en el aviso antes de resumir el resto como "y N más". */
+const MAXIMO_ACTAS_EN_AVISO = 5;
 
 /** Estilo común de las barras: entran creciendo, puntas redondeadas y se resaltan al tocarlas. */
 const PROPS_GRAFICO = {
@@ -49,6 +58,7 @@ export function PanelSeguimientoScreen() {
 
   const resumen = useResumenPorRecinto();
   const progreso = useProgresoPorDignidad(dignidad);
+  const ubicacionesNoVerificadas = useActasUbicacionNoVerificada();
 
   const totalReportadas = resumen.data?.ok ? resumen.data.value.reduce((acc, r) => acc + r.mesasReportadas, 0) : 0;
   const totalMesas = resumen.data?.ok ? resumen.data.value.reduce((acc, r) => acc + r.mesasTotales, 0) : 0;
@@ -61,6 +71,10 @@ export function PanelSeguimientoScreen() {
       </View>
 
       <ProgresoMesas reportadas={totalReportadas} total={totalMesas} />
+
+      {ubicacionesNoVerificadas.data?.ok && ubicacionesNoVerificadas.data.value.length > 0 ? (
+        <AvisoUbicacionesNoVerificadas actas={ubicacionesNoVerificadas.data.value} />
+      ) : null}
 
       <Text style={styles.subtitulo}>Mesas por recinto</Text>
       {resumen.isLoading ? (
@@ -114,6 +128,34 @@ export function PanelSeguimientoScreen() {
         />
       )}
     </Screen>
+  );
+}
+
+/**
+ * ADR-04: "si supera los 5 minutos se marca como no verificada para que el
+ * coordinador la vea en el panel". No vibra: el panel se refresca solo y
+ * no debe interrumpir cada vez que llega un acta.
+ */
+function AvisoUbicacionesNoVerificadas({ actas }: { actas: ActaUbicacionNoVerificada[] }) {
+  const visibles = actas.slice(0, MAXIMO_ACTAS_EN_AVISO);
+  const restantes = actas.length - visibles.length;
+  const titulo =
+    actas.length === 1 ? '1 acta con ubicación no verificada' : `${actas.length} actas con ubicación no verificada`;
+
+  return (
+    <AlertBanner
+      nivel="advertencia"
+      vibrar={false}
+      titulo={titulo}
+      mensaje="La ubicación se tomó más de 5 minutos antes de registrar el acta. Conviene revisarlas."
+    >
+      {visibles.map((a) => (
+        <Text key={a.actaId} style={styles.itemAviso}>
+          • Mesa {a.numeroJrv} · {a.nombreRecinto} ({a.dignidad === 'ALCALDIA' ? 'Alcaldía' : 'Prefectura'})
+        </Text>
+      ))}
+      {restantes > 0 ? <Text style={styles.itemAviso}>y {restantes} más</Text> : null}
+    </AlertBanner>
   );
 }
 
@@ -197,6 +239,7 @@ const styles = StyleSheet.create({
   pista: { height: 10, borderRadius: radius.pill, backgroundColor: colors.surface, overflow: 'hidden' },
   relleno: { height: '100%', borderRadius: radius.pill },
   subtitulo: { ...typography.h3, marginTop: spacing.lg, marginBottom: spacing.sm },
+  itemAviso: { ...typography.caption, color: colors.textPrimary },
   etiquetaBarra: { ...typography.caption, color: colors.textPrimary, textAlign: 'center' },
   ejeTexto: { color: colors.textSecondary, fontSize: 10 },
 });

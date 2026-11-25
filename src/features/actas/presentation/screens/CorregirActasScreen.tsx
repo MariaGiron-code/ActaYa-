@@ -26,6 +26,7 @@ import { useMesa, useOrganizacionesConCandidatos } from '@features/territorio/pr
 import { useActasCorregibles, useCorregirActa } from '../hooks/useActas';
 import { Acta } from '../../domain/entities/Acta';
 import { ConflictoVersion } from '../../domain/repositories/ActasRepository';
+import { EtiquetaUbicacion, TarjetaUbicacion } from '../components/TarjetaUbicacion';
 
 /**
  * RF-12: "el veedor corrige sus mesas y el coordinador de recinto corrige
@@ -87,7 +88,11 @@ export function CorregirActasScreen() {
                 </View>
                 <ChevronRightIcon />
               </View>
-              <StatusBadge estado={item.estado} />
+              <View style={styles.estadosTarjeta}>
+                <StatusBadge estado={item.estado} />
+                {/* ADR-04 / S-10: la ubicación no verificada se ve sin abrir el acta. */}
+                <EtiquetaUbicacion ubicacion={item.ubicacion} />
+              </View>
             </Card>
           )}
           contentContainerStyle={styles.lista}
@@ -191,6 +196,12 @@ function FormularioCorreccion({ acta, onVolver }: { acta: Acta; onVolver: () => 
       <Text style={styles.titulo}>Corregir acta</Text>
       <Text style={styles.cardDetalle}>{acta.dignidad === 'ALCALDIA' ? 'Alcaldía' : 'Prefectura'}</Text>
 
+      {acta.ubicacion ? (
+        <View style={styles.ubicacion}>
+          <TarjetaUbicacion ubicacion={acta.ubicacion} variante="detalle" registradaEn={acta.creadaEn} />
+        </View>
+      ) : null}
+
       {organizacionesDignidad.map(({ organizacion, candidato }) => (
         <TextField
           key={organizacion.id}
@@ -274,6 +285,8 @@ const styles = StyleSheet.create({
   intro: { ...typography.body, color: colors.textSecondary, marginBottom: spacing.md },
   filaTarjeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   datosTarjeta: { gap: spacing.xs },
+  estadosTarjeta: { gap: spacing.xs, marginTop: spacing.xs },
+  ubicacion: { marginTop: spacing.sm, marginBottom: spacing.md },
   cardTitulo: { ...typography.bodyBold, color: colors.textPrimary },
   cardDetalle: { ...typography.caption, color: colors.textSecondary },
   error: { ...typography.body, color: colors.error, textAlign: 'center', marginVertical: spacing.sm },

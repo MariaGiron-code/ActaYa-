@@ -1,8 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { fail, ok, Result } from '@core/utils/result';
 import { Dignidad } from '@features/territorio/domain/entities/Territorio';
-import { ProgresoCandidato, ResumenRecinto } from '../../domain/entities/Seguimiento';
+import { ActaUbicacionNoVerificada, ProgresoCandidato, ResumenRecinto } from '../../domain/entities/Seguimiento';
 import {
+  actaUbicacionNoVerificadaFromRow,
+  ActaUbicacionNoVerificadaRow,
   progresoFromRow,
   ProgresoCandidatoRow,
   resumenFromRow,
@@ -23,6 +25,21 @@ export class SupabaseSeguimientoDatasource {
     const { data, error } = await this.client.rpc('progreso_por_dignidad', { p_dignidad: dignidad });
     if (error) return fail({ code: 'ERROR_PROGRESO_DIGNIDAD', message: error.message, cause: error });
     return ok((data as ProgresoCandidatoRow[]).map(progresoFromRow));
+  }
+
+  /**
+   * ADR-04 / S-10: "si supera los 5 minutos se marca como no verificada
+   * para que el coordinador la vea en el panel". La RLS de `actas` ya deja
+   * al provincial leer todas (`actas_select_alcance`).
+   */
+  async listarActasUbicacionNoVerificada(): Promise<Result<ActaUbicacionNoVerificada[]>> {
+    const { data, error } = await this.client
+      .from('actas')
+      .select('id, dignidad, mesas(numero_jrv, recintos(nombre))')
+      .eq('ubicacion_verificada', false)
+      .order('creada_en', { ascending: false });
+    if (error) return fail({ code: 'ERROR_UBICACIONES_NO_VERIFICADAS', message: error.message, cause: error });
+    return ok((data as unknown as ActaUbicacionNoVerificadaRow[]).map(actaUbicacionNoVerificadaFromRow));
   }
 
   /**

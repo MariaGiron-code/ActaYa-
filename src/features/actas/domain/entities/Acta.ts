@@ -7,6 +7,11 @@ export type Ubicacion = {
   capturadaEn: string; // ISO date
   /** S-10: verificada si tiene menos de 5 minutos de antigüedad al momento de guardarse. */
   verificada: boolean;
+  /**
+   * Radio de error en metros que informa el teléfono. Solo se usa para
+   * mostrárselo al veedor al capturar: no se guarda en el servidor.
+   */
+  precisionMetros?: number | null;
 };
 
 export interface Acta {

@@ -1,7 +1,7 @@
 import { Result } from '@core/utils/result';
 import { Dignidad } from '@features/territorio/domain/entities/Territorio';
 import { SeguimientoRepository } from '../../domain/repositories/SeguimientoRepository';
-import { ProgresoCandidato, ResumenRecinto } from '../../domain/entities/Seguimiento';
+import { ActaUbicacionNoVerificada, ProgresoCandidato, ResumenRecinto } from '../../domain/entities/Seguimiento';
 import { SupabaseSeguimientoDatasource } from '../datasources/SupabaseSeguimientoDatasource';
 
 export class SeguimientoRepositoryImpl implements SeguimientoRepository {
@@ -13,6 +13,10 @@ export class SeguimientoRepositoryImpl implements SeguimientoRepository {
 
   obtenerProgresoPorDignidad(dignidad: Dignidad): Promise<Result<ProgresoCandidato[]>> {
     return this.datasource.obtenerProgresoPorDignidad(dignidad);
+  }
+
+  listarActasUbicacionNoVerificada(): Promise<Result<ActaUbicacionNoVerificada[]>> {
+    return this.datasource.listarActasUbicacionNoVerificada();
   }
 
   suscribirseAActualizaciones(onCambio: () => void): () => void {

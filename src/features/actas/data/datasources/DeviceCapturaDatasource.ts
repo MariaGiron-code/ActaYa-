@@ -10,6 +10,8 @@ import { Ubicacion } from '../../domain/entities/Acta';
 
 /** ADR-10/S-10: una ubicación capturada hace más de esto se marca `verificada: false`. */
 const VENTANA_UBICACION_VERIFICADA_MS = 5 * 60 * 1000;
+/** Cuánto se espera al GPS antes de usar la última ubicación conocida (ADR-04). */
+const TIEMPO_LIMITE_GPS_MS = 15 * 1000;
 
 /** Ancho al que se reduce la foto SOLO para medir nitidez (no es el archivo que se sube). */
 const ANCHO_ANALISIS_NITIDEZ = 512;
@@ -42,19 +44,45 @@ export class DeviceCapturaDatasource {
       });
     }
 
-    try {
-      const posicion = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      const capturadaEn = new Date(posicion.timestamp).toISOString();
-      const antiguedadMs = Date.now() - posicion.timestamp;
+    // ADR-04: primero se pide una posición nueva al GPS; bajo techo puede
+    // tardar mucho o fallar, así que tiene un tiempo límite. Si no llega,
+    // se usa la última ubicación conocida del teléfono, que queda marcada
+    // como no verificada si tiene más de 5 minutos (S-10).
+    const posicion =
+      (await this.posicionActualConLimite()) ?? (await Location.getLastKnownPositionAsync().catch(() => null));
 
-      return ok({
-        latitud: posicion.coords.latitude,
-        longitud: posicion.coords.longitude,
-        capturadaEn,
-        verificada: antiguedadMs <= VENTANA_UBICACION_VERIFICADA_MS,
+    if (!posicion) {
+      return fail({
+        code: 'ERROR_UBICACION',
+        message: 'No se pudo obtener la ubicación. Activa el GPS o acércate a una ventana y vuelve a intentar.',
       });
-    } catch (error) {
-      return fail({ code: 'ERROR_UBICACION', message: 'No se pudo obtener la ubicación.', cause: error });
+    }
+
+    const antiguedadMs = Date.now() - posicion.timestamp;
+    return ok({
+      latitud: posicion.coords.latitude,
+      longitud: posicion.coords.longitude,
+      capturadaEn: new Date(posicion.timestamp).toISOString(),
+      verificada: antiguedadMs <= VENTANA_UBICACION_VERIFICADA_MS,
+      precisionMetros: posicion.coords.accuracy,
+    });
+  }
+
+  /** `null` si el GPS falla o no responde a tiempo. */
+  private async posicionActualConLimite(): Promise<Location.LocationObject | null> {
+    let temporizador: ReturnType<typeof setTimeout> | undefined;
+    const limite = new Promise<null>((resolver) => {
+      temporizador = setTimeout(() => resolver(null), TIEMPO_LIMITE_GPS_MS);
+    });
+    try {
+      return await Promise.race([
+        Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High }),
+        limite,
+      ]);
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(temporizador);
     }
   }
 

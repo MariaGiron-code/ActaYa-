@@ -32,11 +32,13 @@ import { Dignidad } from '@features/territorio/domain/entities/Territorio';
 import {
   useActasPendientes,
   useAlertaDemoraRegistro,
+  useActualizarUbicacion,
   useCapturarFotoActa,
   useRegistrarActa,
   useSincronizarActasAlVolverOnline,
 } from '../hooks/useActas';
 import { Ubicacion } from '../../domain/entities/Acta';
+import { TarjetaUbicacion } from '../components/TarjetaUbicacion';
 
 const DIGNIDADES: { valor: Dignidad; etiqueta: string }[] = [
   { valor: 'ALCALDIA', etiqueta: 'Alcaldía' },
@@ -175,6 +177,7 @@ function FormularioActa({
   const mesa = useMesa(asignacion.mesaId);
   const organizaciones = useOrganizacionesConCandidatos();
   const capturarFoto = useCapturarFotoActa();
+  const actualizarUbicacion = useActualizarUbicacion();
   const registrarActa = useRegistrarActa();
 
   const [dignidad, setDignidad] = useState<Dignidad | null>(null);
@@ -224,6 +227,22 @@ function FormularioActa({
       setNitidez(resultado.value.nitidez);
     } else {
       haptics.error();
+    }
+  }
+
+  async function reintentarUbicacion() {
+    const resultado = await actualizarUbicacion.mutateAsync();
+    if (!resultado.ok) {
+      haptics.error();
+      toast.error(resultado.error.message);
+      return;
+    }
+    setUbicacion(resultado.value);
+    if (resultado.value.verificada) {
+      haptics.exito();
+      toast.exito('Ubicación actualizada');
+    } else {
+      toast.info('El GPS sigue sin responder. Puedes guardar el acta igual.');
     }
   }
 
@@ -313,6 +332,15 @@ function FormularioActa({
             ) : (
               <Text style={styles.vacio}>Todavía no has tomado la foto del acta.</Text>
             )}
+            {/* ADR-04: el veedor ve en el momento desde dónde quedó registrada la foto. */}
+            {fotoUri && ubicacion ? (
+              <TarjetaUbicacion
+                ubicacion={ubicacion}
+                variante="captura"
+                onReintentar={reintentarUbicacion}
+                reintentando={actualizarUbicacion.isPending}
+              />
+            ) : null}
             <Button
               label={fotoUri ? 'Repetir foto' : 'Tomar foto del acta'}
               variant="outline"

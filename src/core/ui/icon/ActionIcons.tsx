@@ -101,3 +101,12 @@ export function SalirIcon({ size = 20, color = colors.textSecondary }: ActionIco
     </Svg>
   );
 }
+
+export function UbicacionIcon({ size = 18, color = colors.primary }: ActionIconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24">
+      <Path d="M12 21C12 21 5 14.6 5 9.6A7 7 0 0 1 19 9.6C19 14.6 12 21 12 21Z" {...trazo(color)} />
+      <Circle cx={12} cy={9.6} r={2.6} {...trazo(color)} />
+    </Svg>
+  );
+}
