@@ -14,7 +14,7 @@ export class SupabaseActasDatasource {
   constructor(private readonly client: SupabaseClient) {}
 
   async enviar(acta: Acta): Promise<Result<Acta, ConflictoVersion | AppError>> {
-    const subida = await this.subirFoto(acta.id, acta.registradoPorId, acta.fotoUri as string);
+    const subida = await this.subirFoto(`${acta.registradoPorId}/${acta.id}.jpg`, acta.fotoUri as string);
     if (!subida.ok) {
       // RF-17: "una foto que no se sube" — la sincronización marca el acta
       // como fallida y reintenta, así que este es el único lugar donde el
@@ -51,6 +51,29 @@ export class SupabaseActasDatasource {
     if (cambios.totalSufragantes !== undefined) filaCambios.total_sufragantes = cambios.totalSufragantes;
     filaCambios.version = versionConocida + 1;
     filaCambios.actualizada_en = new Date().toISOString();
+
+    // ADR-04: se volvió a tomar la foto (y con ella la ubicación). Se sube a
+    // la carpeta de QUIEN corrige — la política de Storage solo deja escribir
+    // en la propia — y con la versión en el nombre, para no pisar la anterior.
+    if (cambios.fotoUri) {
+      const { data: sesion } = await this.client.auth.getSession();
+      const usuarioId = sesion.session?.user.id;
+      if (!usuarioId) {
+        return fail({ code: 'SESION_EXPIRADA', message: 'Tu sesión expiró. Vuelve a iniciar sesión.' });
+      }
+      const subida = await this.subirFoto(`${usuarioId}/${actaId}-v${versionConocida + 1}.jpg`, cambios.fotoUri);
+      if (!subida.ok) {
+        reportarFalloDeTarea(subida.error, 'corregir_acta:subir_foto');
+        return fail(subida.error);
+      }
+      filaCambios.foto_path = subida.value;
+    }
+    if (cambios.ubicacion !== undefined) {
+      filaCambios.ubicacion_lat = cambios.ubicacion?.latitud ?? null;
+      filaCambios.ubicacion_lng = cambios.ubicacion?.longitud ?? null;
+      filaCambios.ubicacion_capturada_en = cambios.ubicacion?.capturadaEn ?? null;
+      filaCambios.ubicacion_verificada = cambios.ubicacion?.verificada ?? false;
+    }
 
     const { data, error } = await this.client
       .from('actas')
@@ -96,8 +119,8 @@ export class SupabaseActasDatasource {
     return ok((data as ActaRow[]).map((fila) => actaFromRow(fila, '')));
   }
 
-  private async subirFoto(actaId: string, veedorId: string, uriLocal: string): Promise<Result<string>> {
-    const ruta = `${veedorId}/${actaId}.jpg`;
+  /** `ruta` empieza con el id de quien sube: la política de Storage solo permite escribir en la carpeta propia. */
+  private async subirFoto(ruta: string, uriLocal: string): Promise<Result<string>> {
     const respuesta = await fetch(uriLocal);
     const cuerpo = await respuesta.blob();
 

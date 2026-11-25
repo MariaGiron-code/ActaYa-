@@ -11,11 +11,21 @@ corrección).
   `useSincronizarActasAlVolverOnline` — sin polling activo).
 - RF-10: `ValidarActaUseCase` (ya existía) revalida en cada registro y
   corrección.
-- RF-11/ADR-04/ADR-06: foto + ubicación obligatorias
-  (`CapturarFotoActaUseCase`), con rechazo de fotos borrosas — ver
-  `EvaluarNitidezFoto.ts` para el umbral calibrado y por qué.
-- S-10: la ubicación se marca `verificada: false` si pasaron más de 5
-  minutos entre capturarla y guardar el acta.
+- RF-11/ADR-04/ADR-06: foto obligatoria (`CapturarFotoActaUseCase`), con
+  rechazo de fotos borrosas — ver `EvaluarNitidezFoto.ts` para el umbral
+  calibrado y por qué.
+- ADR-04/S-10, ubicación en tres estados (`TarjetaUbicacion`):
+  - **Verificada**: posición nueva del GPS.
+  - **No verificada**: el GPS no respondió en 15 s y se usó la última
+    ubicación conocida, con más de 5 minutos.
+  - **Sin ubicación**: GPS apagado o permiso negado. La foto NO se
+    descarta y el acta se guarda igual (perderla sería peor, RNF-05), con
+    `ubicacion: null` / `ubicacion_verificada = false`. Se ve en rojo en
+    Corregir actas y en el aviso del panel de seguimiento, y se respalda
+    después con "Volver a tomar foto y ubicación" al corregir.
+- RNF-05: tomar la foto, leer el GPS y guardar el acta usan
+  `networkMode: 'always'` (`useActas.ts`). Sin eso, TanStack Query pausaba
+  esas acciones locales mientras no había señal.
 - RF-12: *"el veedor corrige sus mesas y el coordinador de recinto corrige
   cualquier acta de su recinto"* — `CorregirActasScreen` sirve a ambos roles
   con la MISMA consulta (`listarActasCorregibles`, sin filtro en el

@@ -24,6 +24,8 @@ import {
 } from '@core/ui';
 import { colors, radius, spacing, typography } from '@core/theme';
 import { useVistaMonitoreada } from '@core/monitoring/sentry';
+import { useNetworkStatus } from '@core/network/useNetworkStatus';
+import { onlineManager } from '@tanstack/react-query';
 import { useSessionStore } from '@features/auth/presentation/store/useSessionStore';
 import { useMisAsignaciones } from '@features/personal/presentation/hooks/usePersonal';
 import { AsignacionVeedor } from '@features/personal/domain/entities/AsignacionVeedor';
@@ -148,6 +150,7 @@ function MesaLabel({ mesaId }: { mesaId: string }) {
 
 function ListaPendientes() {
   const pendientes = useActasPendientes();
+  const { isOnline } = useNetworkStatus();
   const actas = pendientes.data?.ok ? pendientes.data.value : [];
 
   if (actas.length === 0) return null;
@@ -155,10 +158,19 @@ function ListaPendientes() {
   return (
     <View style={styles.pendientes}>
       <Text style={styles.subtitulo}>Actas pendientes de envío</Text>
+      {/* RF-13 / RF-14: sin señal, que quede claro que esperan y se envían solas. */}
+      {!isOnline ? (
+        <Animated.Text entering={entradaDeBloque} style={styles.avisoSinSenal}>
+          Sin conexión. Están guardadas en el teléfono y se enviarán solas cuando vuelva la señal.
+        </Animated.Text>
+      ) : null}
       {actas.map((acta) => (
         <Animated.View key={acta.id} entering={entradaDeBloque} layout={transicionDeLayout} style={styles.filaPendiente}>
           <Text style={styles.cardDetalle}>{acta.dignidad === 'ALCALDIA' ? 'Alcaldía' : 'Prefectura'}</Text>
-          <StatusBadge estado={acta.estado} />
+          <StatusBadge
+            estado={acta.estado}
+            etiqueta={!isOnline && acta.estado !== 'guardado' ? 'Esperando señal' : undefined}
+          />
         </Animated.View>
       ))}
     </View>
@@ -221,7 +233,9 @@ function FormularioActa({
   async function capturarEvidencia() {
     const resultado = await capturarFoto.mutateAsync();
     if (resultado.ok) {
-      haptics.exito();
+      // Sin ubicación la foto se conserva igual (ADR-04): avisa, no felicita.
+      if (resultado.value.ubicacion) haptics.exito();
+      else haptics.advertencia();
       setFotoUri(resultado.value.fotoUri);
       setUbicacion(resultado.value.ubicacion);
       setNitidez(resultado.value.nitidez);
@@ -270,7 +284,11 @@ function FormularioActa({
           if (resultado.ok) {
             // RNF-05: se guarda en local primero; el envío se intenta ya y,
             // si no hay señal, se reintenta solo — el badge muestra el estado.
-            toast.exito('Acta guardada en el teléfono. Revisa abajo su estado de envío.');
+            toast.exito(
+              onlineManager.isOnline()
+                ? 'Acta guardada en el teléfono. Revisa abajo su estado de envío.'
+                : 'Acta guardada en el teléfono. Se enviará sola cuando vuelva la señal.'
+            );
             onVolver();
           } else {
             haptics.error();
@@ -333,7 +351,7 @@ function FormularioActa({
               <Text style={styles.vacio}>Todavía no has tomado la foto del acta.</Text>
             )}
             {/* ADR-04: el veedor ve en el momento desde dónde quedó registrada la foto. */}
-            {fotoUri && ubicacion ? (
+            {fotoUri ? (
               <TarjetaUbicacion
                 ubicacion={ubicacion}
                 variante="captura"
@@ -391,5 +409,6 @@ const styles = StyleSheet.create({
   nitidezDebug: { ...typography.caption, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xs },
   error: { ...typography.caption, color: colors.error, textAlign: 'center' },
   pendientes: { marginTop: spacing.lg, gap: spacing.xs },
+  avisoSinSenal: { ...typography.caption, color: colors.textSecondary, marginBottom: spacing.xs },
   filaPendiente: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 });

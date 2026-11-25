@@ -33,9 +33,9 @@ export class RegistrarActaUseCase {
     if (!datos.fotoUri) {
       return fail({ code: 'FOTO_REQUERIDA', message: 'El acta necesita una foto antes de poder guardarse.' });
     }
-    if (!datos.ubicacion) {
-      return fail({ code: 'UBICACION_REQUERIDA', message: 'El acta necesita la ubicación antes de poder guardarse.' });
-    }
+    // RF-11: "un acta sin foto no se envía" — la ubicación NO bloquea el
+    // registro. Sin GPS (apagado o sin permiso) el acta se guarda con
+    // `ubicacion: null` y queda marcada como no verificada (ADR-04/S-10).
 
     const acta: Acta = {
       id: generarId(),

@@ -35,7 +35,7 @@ export class SupabaseSeguimientoDatasource {
   async listarActasUbicacionNoVerificada(): Promise<Result<ActaUbicacionNoVerificada[]>> {
     const { data, error } = await this.client
       .from('actas')
-      .select('id, dignidad, mesas(numero_jrv, recintos(nombre))')
+      .select('id, dignidad, ubicacion_lat, mesas(numero_jrv, recintos(nombre))')
       .eq('ubicacion_verificada', false)
       .order('creada_en', { ascending: false });
     if (error) return fail({ code: 'ERROR_UBICACIONES_NO_VERIFICADAS', message: error.message, cause: error });

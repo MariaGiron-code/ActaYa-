@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { onlineManager, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNetworkStatus } from '@core/network/useNetworkStatus';
 import { personalContainer } from '@features/personal/di/personalContainer';
 import { territorioContainer } from '@features/territorio/di/territorioContainer';
@@ -12,6 +12,14 @@ import { calcularAlertaDemora } from '../../domain/use-cases/CalcularAlertaDemor
 const CLAVE_PENDIENTES = ['actas', 'pendientes'];
 const CLAVE_CORREGIBLES = ['actas', 'corregibles'];
 const CLAVE_LOCALES = ['actas', 'locales'];
+
+/**
+ * RNF-05: por defecto TanStack Query PAUSA toda acción mientras no hay red
+ * (`networkMode: 'online'`), aunque no la necesite. Tomar la foto, leer el
+ * GPS y guardar en el teléfono son locales: sin esto, sin señal los botones
+ * se quedaban cargando y el acta no se guardaba hasta recuperar conexión.
+ */
+const SIN_DEPENDER_DE_LA_RED = { networkMode: 'always' } as const;
 
 export function useActasPendientes() {
   return useQuery({
@@ -32,6 +40,7 @@ export function useActasCorregibles() {
 export function useCapturarFotoActa() {
   return useMutation({
     mutationFn: () => actasContainer.capturarFotoActaUseCase.ejecutar(),
+    ...SIN_DEPENDER_DE_LA_RED,
   });
 }
 
@@ -39,6 +48,7 @@ export function useCapturarFotoActa() {
 export function useActualizarUbicacion() {
   return useMutation({
     mutationFn: () => actasContainer.capturaRepository.obtenerUbicacionActual(),
+    ...SIN_DEPENDER_DE_LA_RED,
   });
 }
 
@@ -47,10 +57,15 @@ export function useRegistrarActa() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (datos: RegistrarActaInput) => actasContainer.registrarActaUseCase.ejecutar(datos),
+    ...SIN_DEPENDER_DE_LA_RED,
     onSuccess: (resultado) => {
       if (!resultado.ok) return;
       queryClient.invalidateQueries({ queryKey: CLAVE_PENDIENTES });
       queryClient.invalidateQueries({ queryKey: CLAVE_LOCALES });
+      // Sin señal no se intenta: el envío fallaría y el acta aparecería como
+      // "No se pudo enviar" cuando en realidad solo está esperando conexión.
+      // `useSincronizarActasAlVolverOnline` la envía al volver la señal.
+      if (!onlineManager.isOnline()) return;
       // No basta con esperar a que `useSincronizarActasAlVolverOnline`
       // detecte un cambio de conectividad: ese efecto solo reacciona a la
       // TRANSICIÓN offline->online, así que si el veedor ya tenía señal

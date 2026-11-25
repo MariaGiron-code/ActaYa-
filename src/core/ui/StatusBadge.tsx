@@ -30,8 +30,10 @@ const CONFIG: Record<EstadoEnvio, { color: string; colorTexto: string; texto: st
  * Mientras envía, el punto late; al cambiar de estado el color se funde, el
  * ancho se ajusta suave y aparece un check (o una X con sacudida si falló).
  */
-export function StatusBadge({ estado }: { estado: EstadoEnvio }) {
-  const { color, colorTexto, texto } = CONFIG[estado];
+export function StatusBadge({ estado, etiqueta }: { estado: EstadoEnvio; etiqueta?: string }) {
+  const { color, colorTexto } = CONFIG[estado];
+  // `etiqueta` permite precisar el texto sin cambiar el estado (p. ej. "Esperando señal" sin conexión).
+  const texto = etiqueta ?? CONFIG[estado].texto;
   const latido = useSharedValue(1);
   const sacudida = useSharedValue(0);
 

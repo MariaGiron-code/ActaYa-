@@ -50,6 +50,7 @@ type UnoOVarios<T> = T | T[] | null;
 export type ActaUbicacionNoVerificadaRow = {
   id: string;
   dignidad: Dignidad;
+  ubicacion_lat: number | null;
   mesas: UnoOVarios<{ numero_jrv: string; recintos: UnoOVarios<{ nombre: string }> }>;
 };
 
@@ -60,6 +61,7 @@ export function actaUbicacionNoVerificadaFromRow(row: ActaUbicacionNoVerificadaR
   const recinto = mesa ? primero(mesa.recintos) : null;
   return {
     actaId: row.id,
+    sinUbicacion: row.ubicacion_lat == null,
     dignidad: row.dignidad,
     numeroJrv: mesa?.numero_jrv ?? '?',
     nombreRecinto: recinto?.nombre ?? 'Recinto desconocido',

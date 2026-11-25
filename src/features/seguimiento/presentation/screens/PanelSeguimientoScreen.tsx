@@ -147,11 +147,12 @@ function AvisoUbicacionesNoVerificadas({ actas }: { actas: ActaUbicacionNoVerifi
       nivel="advertencia"
       vibrar={false}
       titulo={titulo}
-      mensaje="La ubicación se tomó más de 5 minutos antes de registrar el acta. Conviene revisarlas."
+      mensaje="Se registraron con una ubicación de más de 5 minutos o sin ubicación (GPS apagado). Conviene revisarlas."
     >
       {visibles.map((a) => (
         <Text key={a.actaId} style={styles.itemAviso}>
           • Mesa {a.numeroJrv} · {a.nombreRecinto} ({a.dignidad === 'ALCALDIA' ? 'Alcaldía' : 'Prefectura'})
+          {a.sinUbicacion ? <Text style={styles.itemSinUbicacion}> · sin ubicación</Text> : null}
         </Text>
       ))}
       {restantes > 0 ? <Text style={styles.itemAviso}>y {restantes} más</Text> : null}
@@ -240,6 +241,7 @@ const styles = StyleSheet.create({
   relleno: { height: '100%', borderRadius: radius.pill },
   subtitulo: { ...typography.h3, marginTop: spacing.lg, marginBottom: spacing.sm },
   itemAviso: { ...typography.caption, color: colors.textPrimary },
+  itemSinUbicacion: { color: colors.error, fontWeight: '700' },
   etiquetaBarra: { ...typography.caption, color: colors.textPrimary, textAlign: 'center' },
   ejeTexto: { color: colors.textSecondary, fontSize: 10 },
 });

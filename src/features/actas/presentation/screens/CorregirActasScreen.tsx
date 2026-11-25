@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import { FlatList, Image, StyleSheet, Text, View } from 'react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 import {
   AlertBanner,
   animaciones,
@@ -22,9 +22,10 @@ import {
 } from '@core/ui';
 import { colors, radius, spacing, typography } from '@core/theme';
 import { useVistaMonitoreada } from '@core/monitoring/sentry';
+import { useNetworkStatus } from '@core/network/useNetworkStatus';
 import { useMesa, useOrganizacionesConCandidatos } from '@features/territorio/presentation/hooks/useTerritorio';
-import { useActasCorregibles, useCorregirActa } from '../hooks/useActas';
-import { Acta } from '../../domain/entities/Acta';
+import { useActasCorregibles, useActualizarUbicacion, useCapturarFotoActa, useCorregirActa } from '../hooks/useActas';
+import { Acta, Ubicacion } from '../../domain/entities/Acta';
 import { ConflictoVersion } from '../../domain/repositories/ActasRepository';
 import { EtiquetaUbicacion, TarjetaUbicacion } from '../components/TarjetaUbicacion';
 
@@ -111,6 +112,12 @@ function MesaLabel({ mesaId }: { mesaId: string }) {
 function FormularioCorreccion({ acta, onVolver }: { acta: Acta; onVolver: () => void }) {
   const organizaciones = useOrganizacionesConCandidatos();
   const corregirActa = useCorregirActa();
+  const capturarFoto = useCapturarFotoActa();
+  const actualizarUbicacion = useActualizarUbicacion();
+  const { isOnline } = useNetworkStatus();
+  // ADR-04: foto y ubicación nuevas, si se volvió a tomar la foto (p. ej. el
+  // acta se registró con el GPS apagado). Se guardan junto con la corrección.
+  const [nuevaEvidencia, setNuevaEvidencia] = useState<{ fotoUri: string; ubicacion: Ubicacion | null } | null>(null);
 
   // Se guarda la acta "tal como la conoce el cliente" por separado del prop
   // original: si llega un conflicto de versión (S-05) y el usuario carga la
@@ -139,7 +146,39 @@ function FormularioCorreccion({ acta, onVolver }: { acta: Acta; onVolver: () => 
       );
   }, [organizaciones.data, acta.dignidad]);
 
+  async function retomarFoto() {
+    const resultado = await capturarFoto.mutateAsync();
+    if (!resultado.ok) {
+      haptics.error();
+      return;
+    }
+    if (resultado.value.ubicacion) haptics.exito();
+    else haptics.advertencia();
+    setNuevaEvidencia({ fotoUri: resultado.value.fotoUri, ubicacion: resultado.value.ubicacion });
+  }
+
+  async function reintentarUbicacion() {
+    const resultado = await actualizarUbicacion.mutateAsync();
+    if (!resultado.ok) {
+      haptics.error();
+      toast.error(resultado.error.message);
+      return;
+    }
+    setNuevaEvidencia((actual) => (actual ? { ...actual, ubicacion: resultado.value } : actual));
+    if (resultado.value.verificada) {
+      haptics.exito();
+      toast.exito('Ubicación actualizada');
+    }
+  }
+
   function guardar() {
+    // La corrección compara versiones con el servidor (S-05): sin señal no
+    // se puede, y es mejor decirlo que dejar el botón cargando.
+    if (!isOnline) {
+      haptics.error();
+      toast.error('Necesitas conexión a internet para guardar la corrección.');
+      return;
+    }
     const votosPorOrganizacion: Record<string, number> = {};
     for (const { organizacion } of organizacionesDignidad) {
       votosPorOrganizacion[organizacion.id] = Number(votos[organizacion.id] ?? '0') || 0;
@@ -153,6 +192,7 @@ function FormularioCorreccion({ acta, onVolver }: { acta: Acta; onVolver: () => 
           votosNulos: Number(votosNulos) || 0,
           votosBlancos: Number(votosBlancos) || 0,
           totalSufragantes: Number(totalSufragantes) || 0,
+          ...(nuevaEvidencia ? { fotoUri: nuevaEvidencia.fotoUri, ubicacion: nuevaEvidencia.ubicacion } : {}),
         },
         actaActual,
       },
@@ -196,11 +236,33 @@ function FormularioCorreccion({ acta, onVolver }: { acta: Acta; onVolver: () => 
       <Text style={styles.titulo}>Corregir acta</Text>
       <Text style={styles.cardDetalle}>{acta.dignidad === 'ALCALDIA' ? 'Alcaldía' : 'Prefectura'}</Text>
 
-      {acta.ubicacion ? (
-        <View style={styles.ubicacion}>
-          <TarjetaUbicacion ubicacion={acta.ubicacion} variante="detalle" registradaEn={acta.creadaEn} />
-        </View>
-      ) : null}
+      <View style={styles.evidencia}>
+        {nuevaEvidencia ? (
+          <Animated.View key={nuevaEvidencia.fotoUri} entering={ZoomIn.duration(260)} style={styles.evidencia}>
+            <Image source={{ uri: nuevaEvidencia.fotoUri }} style={styles.foto} />
+            <TarjetaUbicacion
+              ubicacion={nuevaEvidencia.ubicacion}
+              variante="captura"
+              onReintentar={reintentarUbicacion}
+              reintentando={actualizarUbicacion.isPending}
+            />
+            <Text style={styles.nota}>La foto nueva reemplaza a la anterior al guardar la corrección.</Text>
+          </Animated.View>
+        ) : (
+          <TarjetaUbicacion ubicacion={actaActual.ubicacion} variante="detalle" registradaEn={actaActual.creadaEn} />
+        )}
+        <Button
+          label={nuevaEvidencia ? 'Repetir foto' : 'Volver a tomar foto y ubicación'}
+          variant="outline"
+          onPress={retomarFoto}
+          loading={capturarFoto.isPending}
+        />
+        {capturarFoto.data && !capturarFoto.data.ok ? (
+          <Animated.Text entering={entradaDeBloque} style={styles.error}>
+            {capturarFoto.data.error.message}
+          </Animated.Text>
+        ) : null}
+      </View>
 
       {organizacionesDignidad.map(({ organizacion, candidato }) => (
         <TextField
@@ -286,7 +348,9 @@ const styles = StyleSheet.create({
   filaTarjeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   datosTarjeta: { gap: spacing.xs },
   estadosTarjeta: { gap: spacing.xs, marginTop: spacing.xs },
-  ubicacion: { marginTop: spacing.sm, marginBottom: spacing.md },
+  evidencia: { gap: spacing.sm, marginTop: spacing.sm, marginBottom: spacing.md },
+  foto: { width: '100%', height: 200, borderRadius: radius.sm },
+  nota: { ...typography.caption, color: colors.textSecondary },
   cardTitulo: { ...typography.bodyBold, color: colors.textPrimary },
   cardDetalle: { ...typography.caption, color: colors.textSecondary },
   error: { ...typography.body, color: colors.error, textAlign: 'center', marginVertical: spacing.sm },

@@ -9,11 +9,13 @@ export interface ResumenRecinto {
 }
 
 /**
- * ADR-04 / S-10: acta cuya ubicación tenía más de 5 minutos al registrarse.
- * El coordinador provincial la ve en el panel para revisarla.
+ * ADR-04 / S-10: acta cuya ubicación tenía más de 5 minutos al registrarse,
+ * o que se registró sin ubicación (GPS apagado o sin permiso). El
+ * coordinador provincial la ve en el panel para revisarla.
  */
 export interface ActaUbicacionNoVerificada {
   actaId: string;
+  sinUbicacion: boolean;
   dignidad: Dignidad;
   numeroJrv: string;
   nombreRecinto: string;

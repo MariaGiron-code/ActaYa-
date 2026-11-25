@@ -23,58 +23,83 @@ function abrirEnMapa(u: Ubicacion) {
 }
 
 type TarjetaUbicacionProps = {
-  ubicacion: Ubicacion;
+  /** `null`: el acta no tiene ubicación (GPS apagado o permiso negado). */
+  ubicacion: Ubicacion | null;
   /**
-   * `captura`: la ve el veedor justo después de tomar la foto.
+   * `captura`: la ve quien acaba de tomar la foto.
    * `detalle`: la ve un coordinador al abrir un acta ya registrada.
    */
   variante: 'captura' | 'detalle';
   /** Solo `detalle`: cuándo se registró el acta, para compararlo con la hora de la ubicación. */
   registradaEn?: string;
-  /** Solo `captura`: vuelve a pedir la ubicación al GPS cuando quedó no verificada. */
+  /** Solo `captura`: vuelve a pedir la ubicación al GPS cuando no quedó verificada. */
   onReintentar?: () => void;
   reintentando?: boolean;
 };
 
+type Estado = 'verificada' | 'no_verificada' | 'sin_ubicacion';
+
+const ESTILO_POR_ESTADO: Record<Estado, { color: string; tarjeta: 'verificada' | 'noVerificada' | 'sinUbicacion' }> = {
+  verificada: { color: colors.success, tarjeta: 'verificada' },
+  no_verificada: { color: colors.textPrimary, tarjeta: 'noVerificada' },
+  sin_ubicacion: { color: colors.error, tarjeta: 'sinUbicacion' },
+};
+
+function estadoDe(ubicacion: Ubicacion | null): Estado {
+  if (!ubicacion) return 'sin_ubicacion';
+  return ubicacion.verificada ? 'verificada' : 'no_verificada';
+}
+
 /**
- * ADR-04 / S-10: muestra desde dónde se tomó la foto del acta. Verde si la
- * ubicación es reciente (verificada); amarilla si tiene más de 5 minutos,
- * para que el veedor lo sepa al momento y el coordinador pueda revisarla.
+ * ADR-04 / S-10: muestra desde dónde se tomó la foto del acta.
+ * Verde: ubicación reciente (verificada). Amarilla: la última conocida, de
+ * más de 5 minutos. Roja: sin ubicación (GPS apagado o sin permiso); el
+ * acta se guarda igual y queda marcada para revisión.
  */
 export function TarjetaUbicacion({ ubicacion, variante, registradaEn, onReintentar, reintentando }: TarjetaUbicacionProps) {
-  const { verificada } = ubicacion;
-  const color = verificada ? colors.success : colors.textPrimary;
+  const estado = estadoDe(ubicacion);
+  const { color, tarjeta } = ESTILO_POR_ESTADO[estado];
 
   const titulo =
-    variante === 'detalle'
-      ? verificada
-        ? 'Ubicación verificada'
-        : 'Ubicación no verificada'
-      : verificada
-        ? 'Ubicación registrada'
-        : 'Ubicación no verificada';
+    estado === 'sin_ubicacion'
+      ? 'Sin ubicación'
+      : estado === 'no_verificada'
+        ? 'Ubicación no verificada'
+        : variante === 'captura'
+          ? 'Ubicación registrada'
+          : 'Ubicación verificada';
 
-  const lineas: string[] = [formatearCoordenadas(ubicacion)];
-  if (variante === 'captura') {
+  const lineas: string[] = [];
+  if (!ubicacion) {
+    lineas.push(
+      variante === 'captura'
+        ? 'El GPS está apagado o no diste permiso de ubicación. Puedes guardar el acta igual: quedará marcada para revisión.'
+        : 'Se registró con el GPS apagado o sin permiso de ubicación. Para respaldarla, vuelve a tomar la foto con el GPS activo.'
+    );
+  } else if (variante === 'captura') {
+    lineas.push(formatearCoordenadas(ubicacion));
     const precision =
       ubicacion.precisionMetros != null ? ` · precisión ±${Math.round(ubicacion.precisionMetros)} m` : '';
     lineas.push(`Tomada a las ${formatearHora(ubicacion.capturadaEn)}${precision}`);
-    if (!verificada) {
+    if (!ubicacion.verificada) {
       lineas.push('El GPS no respondió y se usó la última ubicación guardada en el teléfono. Puedes guardar igual.');
     }
   } else {
+    lineas.push(formatearCoordenadas(ubicacion));
     const registro = registradaEn ? ` · acta registrada ${formatearHora(registradaEn)}` : '';
     lineas.push(`Ubicación ${formatearHora(ubicacion.capturadaEn)}${registro}`);
   }
+
+  const puedeReintentar = variante === 'captura' && estado !== 'verificada' && onReintentar;
 
   return (
     <Animated.View
       entering={entradaDeBloque}
       layout={transicionDeLayout}
-      style={[styles.tarjeta, verificada ? styles.verificada : styles.noVerificada]}
+      style={[styles.tarjeta, styles[tarjeta]]}
       accessibilityLabel={`${titulo}. ${lineas.join('. ')}`}
     >
-      <UbicacionIcon size={22} color={verificada ? colors.success : colors.textPrimary} />
+      <UbicacionIcon size={22} color={color} />
       <View style={styles.contenido}>
         <Text style={[styles.titulo, { color }]}>{titulo}</Text>
         {lineas.map((linea) => (
@@ -83,13 +108,13 @@ export function TarjetaUbicacion({ ubicacion, variante, registradaEn, onReintent
           </Text>
         ))}
 
-        {variante === 'detalle' ? (
+        {variante === 'detalle' && ubicacion ? (
           <Pressable onPress={() => abrirEnMapa(ubicacion)} accessibilityRole="link" hitSlop={8} style={styles.enlace}>
             <Text style={styles.textoEnlace}>Ver en el mapa</Text>
           </Pressable>
         ) : null}
 
-        {variante === 'captura' && !verificada && onReintentar ? (
+        {puedeReintentar ? (
           <Pressable
             onPress={() => {
               haptics.tap();
@@ -110,7 +135,14 @@ export function TarjetaUbicacion({ ubicacion, variante, registradaEn, onReintent
 
 /** Versión corta para listas: una línea con el ícono y el estado de la ubicación. */
 export function EtiquetaUbicacion({ ubicacion }: { ubicacion: Ubicacion | null }) {
-  if (!ubicacion) return null;
+  if (!ubicacion) {
+    return (
+      <View style={[styles.etiqueta, styles.etiquetaSinUbicacion]}>
+        <UbicacionIcon size={14} color={colors.error} />
+        <Text style={[styles.textoEtiqueta, { color: colors.error }]}>Sin ubicación</Text>
+      </View>
+    );
+  }
   if (ubicacion.verificada) {
     return (
       <View style={styles.etiqueta}>
@@ -137,6 +169,7 @@ const styles = StyleSheet.create({
   },
   verificada: { backgroundColor: colors.success + '14', borderColor: colors.success },
   noVerificada: { backgroundColor: colors.warning + '26', borderColor: colors.warning },
+  sinUbicacion: { backgroundColor: colors.error + '14', borderColor: colors.error },
   contenido: { flex: 1, gap: 2 },
   titulo: { ...typography.bodyBold },
   detalle: { ...typography.caption, color: colors.textSecondary },
@@ -145,6 +178,12 @@ const styles = StyleSheet.create({
   etiqueta: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' },
   etiquetaAviso: {
     backgroundColor: colors.warning + '40',
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  etiquetaSinUbicacion: {
+    backgroundColor: colors.error + '1A',
     borderRadius: radius.pill,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,

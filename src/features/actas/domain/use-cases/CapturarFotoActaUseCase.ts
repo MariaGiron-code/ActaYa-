@@ -3,11 +3,16 @@ import { CapturaRepository } from '../repositories/CapturaRepository';
 import { Ubicacion } from '../entities/Acta';
 import { fotoEsLegible, UMBRAL_NITIDEZ_MINIMO } from './EvaluarNitidezFoto';
 
-export type EvidenciaCapturada = { fotoUri: string; ubicacion: Ubicacion; nitidez: number };
+/** `ubicacion: null` = el GPS está apagado o no hay permiso: la foto se conserva igual. */
+export type EvidenciaCapturada = { fotoUri: string; ubicacion: Ubicacion | null; nitidez: number };
 
 /**
  * RF-11 (foto obligatoria) + ADR-06 (rechazar fotos borrosas) + ADR-04/S-10
- * (ubicación obligatoria, marcada no verificada si quedó vieja). Orquesta el
+ * (ubicación: verificada si es reciente, no verificada si es la última
+ * conocida y tiene más de 5 minutos, y `null` si no hay ninguna — GPS
+ * apagado o permiso negado). Sin ubicación NO se descarta la foto: perder
+ * el acta sería peor (RNF-05); queda marcada para que el coordinador la
+ * revise y se puede respaldar después retomando la foto. Orquesta el
  * puerto `CapturaRepository`; la decisión de qué es "borroso" vive en
  * `EvaluarNitidezFoto`, no aquí.
  */
@@ -32,8 +37,14 @@ export class CapturarFotoActaUseCase {
     }
 
     const ubicacion = await this.repository.obtenerUbicacionActual();
-    if (!ubicacion.ok) return fail(ubicacion.error);
 
-    return { ok: true, value: { fotoUri: foto.value.uri, ubicacion: ubicacion.value, nitidez: foto.value.nitidez } };
+    return {
+      ok: true,
+      value: {
+        fotoUri: foto.value.uri,
+        ubicacion: ubicacion.ok ? ubicacion.value : null,
+        nitidez: foto.value.nitidez,
+      },
+    };
   }
 }

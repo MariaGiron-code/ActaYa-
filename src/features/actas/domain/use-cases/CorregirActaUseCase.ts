@@ -3,8 +3,12 @@ import { ActasRepository, ConflictoVersion } from '../repositories/ActasReposito
 import { Acta } from '../entities/Acta';
 import { validarActa } from './ValidarActaUseCase';
 
+/**
+ * `fotoUri` + `ubicacion`: opcionales, solo si se volvió a tomar la foto
+ * (ADR-04) — p. ej. un acta que se registró sin GPS y ahora se respalda.
+ */
 export type CorregirActaInput = Partial<
-  Pick<Acta, 'votosPorOrganizacion' | 'votosNulos' | 'votosBlancos' | 'totalSufragantes'>
+  Pick<Acta, 'votosPorOrganizacion' | 'votosNulos' | 'votosBlancos' | 'totalSufragantes' | 'fotoUri' | 'ubicacion'>
 >;
 
 /**
