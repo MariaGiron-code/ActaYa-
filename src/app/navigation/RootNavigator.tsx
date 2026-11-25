@@ -30,7 +30,6 @@ const opcionesDePantalla: NativeStackNavigationOptions = {
   headerTitleStyle: { fontSize: typography.h3.fontSize, fontWeight: typography.h3.fontWeight },
   headerShadowVisible: false,
   headerBackButtonDisplayMode: 'minimal',
-  // Misma transición en Android e iOS (Android por defecto hace un fade corto).
   animation: 'slide_from_right',
   fullScreenGestureEnabled: true,
 };
